@@ -14,6 +14,28 @@ const ACTIVE_STATUSES = [
   "picked_up",
 ];
 
+const statusLabel: Record<string, string> = {
+  placed: "Order Placed",
+  accepted: "Accepted",
+  preparing: "Preparing",
+  ready_for_rider: "Ready for Rider",
+  rider_assigned: "Rider Assigned",
+  picked_up: "Picked Up",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+
+const statusBadgeClass: Record<string, string> = {
+  placed: "badge badge-placed",
+  accepted: "badge badge-accepted",
+  preparing: "badge badge-preparing",
+  ready_for_rider: "badge badge-ready",
+  rider_assigned: "badge badge-rider",
+  picked_up: "badge badge-picked",
+  delivered: "badge badge-delivered",
+  cancelled: "badge badge-cancelled",
+};
+
 const Orders = () => {
   const [orders, setOrders] = useState<IOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,12 +47,9 @@ const Orders = () => {
       const { data } = await axios.get(
         `${restaurantService}/api/order/myorder`,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
       );
-
       setOrders(data.orders || []);
     } catch (error) {
       console.log(error);
@@ -45,108 +64,253 @@ const Orders = () => {
 
   useEffect(() => {
     if (!socket) return;
-
-    const onOrderUpdate = () => {
-      fetchOrders();
-    };
-
-    socket.on("order:update", onOrderUpdate);
-    socket.on("order:rider_assigned", onOrderUpdate);
-
+    const onUpdate = () => fetchOrders();
+    socket.on("order:update", onUpdate);
+    socket.on("order:rider_assigned", onUpdate);
     return () => {
-      socket.off("order:update", onOrderUpdate);
-      socket.off("order:rider_assigned", onOrderUpdate);
+      socket.off("order:update", onUpdate);
+      socket.off("order:rider_assigned", onUpdate);
     };
   }, [socket]);
 
-  if (loading) {
-    return <p className="text-center text-gray-500">Loading orders...</p>;
-  }
+  const activeOrders = orders.filter((o) => ACTIVE_STATUSES.includes(o.status));
+  const completedOrders = orders.filter(
+    (o) => !ACTIVE_STATUSES.includes(o.status),
+  );
 
-  if (orders.length === 0) {
+  if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-gray-500">No orders yet</p>
+      <div style={{ maxWidth: 780, margin: "0 auto", padding: "32px 20px" }}>
+        <div
+          className="shimmer"
+          style={{ height: 32, width: 160, borderRadius: 8, marginBottom: 28 }}
+        />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={i}
+            className="shimmer"
+            style={{ height: 100, borderRadius: 16, marginBottom: 12 }}
+          />
+        ))}
       </div>
     );
   }
 
-  const activeOrders = orders.filter((o) => ACTIVE_STATUSES.includes(o.status));
-  const completedOrders = orders.filter(
-    (o) => !ACTIVE_STATUSES.includes(o.status)
-  );
+  if (orders.length === 0) {
+    return (
+      <div
+        style={{
+          minHeight: "70vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 14,
+        }}
+      >
+        <div style={{ fontSize: 52 }}>📦</div>
+        <p style={{ fontSize: 18, fontWeight: 600, color: "#f0f0f0" }}>
+          No orders yet
+        </p>
+        <p style={{ fontSize: 13, color: "#555" }}>
+          Your order history will appear here
+        </p>
+        <button
+          className="btn-accent"
+          onClick={() => navigate("/")}
+          style={{ padding: "12px 28px", marginTop: 8 }}
+        >
+          Order Now
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 space-y-6">
-      <h1 className="text-2xl font-bold">My Orders</h1>
+    <div style={{ maxWidth: 780, margin: "0 auto", padding: "32px 20px 60px" }}>
+      <div className="fade-up" style={{ marginBottom: 32 }}>
+        <h1
+          style={{
+            fontSize: 24,
+            fontWeight: 800,
+            color: "#f0f0f0",
+            letterSpacing: "-0.5px",
+          }}
+        >
+          My Orders
+        </h1>
+        <p style={{ fontSize: 13, color: "#555", marginTop: 4 }}>
+          {orders.length} order{orders.length !== 1 ? "s" : ""} total
+        </p>
+      </div>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Active Orders</h2>
+      {/* Active */}
+      {activeOrders.length > 0 && (
+        <div style={{ marginBottom: 36 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 16,
+            }}
+          >
+            <div className="pulse-dot" />
+            <h2 style={{ fontSize: 14, fontWeight: 600, color: "#f0f0f0" }}>
+              Active Orders
+            </h2>
+            <span
+              style={{
+                fontSize: 11,
+                color: "#4ade80",
+                background: "rgba(74,222,128,0.1)",
+                padding: "2px 8px",
+                borderRadius: 99,
+                fontWeight: 600,
+              }}
+            >
+              {activeOrders.length}
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {activeOrders.map((order) => (
+              <OrderRow
+                key={order._id}
+                order={order}
+                onClick={() => navigate(`/order/${order._id}`)}
+                statusLabel={statusLabel}
+                statusBadgeClass={statusBadgeClass}
+                isActive
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
-        {activeOrders.length === 0 ? (
-          <p>No active orders</p>
-        ) : (
-          activeOrders.map((order) => (
-            <OrderRow
-              key={order._id}
-              order={order}
-              onClick={() => navigate(`/order/${order._id}`)}
-            />
-          ))
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Completed Orders</h2>
-
-        {completedOrders.length === 0 ? (
-          <p>No Completed orders</p>
-        ) : (
-          completedOrders.map((order) => (
-            <OrderRow
-              key={order._id}
-              order={order}
-              onClick={() => navigate(`/order/${order._id}`)}
-            />
-          ))
-        )}
-      </section>
+      {/* Completed */}
+      {completedOrders.length > 0 && (
+        <div>
+          <h2
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: "#555",
+              marginBottom: 16,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+            }}
+          >
+            Past Orders
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {completedOrders.map((order) => (
+              <OrderRow
+                key={order._id}
+                order={order}
+                onClick={() => navigate(`/order/${order._id}`)}
+                statusLabel={statusLabel}
+                statusBadgeClass={statusBadgeClass}
+                isActive={false}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default Orders;
-
-// component Order row
 const OrderRow = ({
   order,
   onClick,
+  statusLabel,
+  statusBadgeClass,
+  isActive,
 }: {
   order: IOrder;
   onClick: () => void;
-}) => {
-  return (
+  statusLabel: Record<string, string>;
+  statusBadgeClass: Record<string, string>;
+  isActive: boolean;
+}) => (
+  <div
+    onClick={onClick}
+    style={{
+      padding: "18px 20px",
+      borderRadius: 16,
+      background: "#161616",
+      border: isActive
+        ? "1px solid rgba(255,77,28,0.2)"
+        : "1px solid rgba(255,255,255,0.06)",
+      cursor: "pointer",
+      transition: "all 0.2s",
+    }}
+    onMouseEnter={(e) => {
+      (e.currentTarget as HTMLDivElement).style.background = "#1e1e1e";
+      (e.currentTarget as HTMLDivElement).style.borderColor = isActive
+        ? "rgba(255,77,28,0.35)"
+        : "rgba(255,255,255,0.1)";
+    }}
+    onMouseLeave={(e) => {
+      (e.currentTarget as HTMLDivElement).style.background = "#161616";
+      (e.currentTarget as HTMLDivElement).style.borderColor = isActive
+        ? "rgba(255,77,28,0.2)"
+        : "rgba(255,255,255,0.06)";
+    }}
+  >
     <div
-      className="cursor-pointer rounded-xl bg-white p-4 shadow-sm hover:bg-gray-50"
-      onClick={onClick}
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        marginBottom: 10,
+      }}
     >
-      <div className="flex justify-between items-center">
-        <p className="text-sm font-medium">Order #{order._id.slice(-6)}</p>
-        <span className="text-xs capitalize text-gray-500">{order.status}</span>
+      <div>
+        <p
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: "#f0f0f0",
+            marginBottom: 3,
+          }}
+        >
+          {order.restaurantName}
+        </p>
+        <p style={{ fontSize: 11, color: "#444" }}>
+          #{order._id.slice(-8).toUpperCase()}
+        </p>
       </div>
-
-      <div className="mt-2 text-sm text-gray-600">
-        {order.items.map((item, i) => (
-          <span key={i}>
-            {item.name} x {item.quauntity}
-            {i < order.items.length - 1 && ", "}
-          </span>
-        ))}
-      </div>
-
-      <div className="mt-2 flex justify-between text-sm font-medium">
-        <span>Total</span>
-        <span>₹{order.totalAmount}</span>
-      </div>
+      <span className={statusBadgeClass[order.status] || "badge"}>
+        {statusLabel[order.status] || order.status}
+      </span>
     </div>
-  );
-};
+
+    <p
+      style={{ fontSize: 12, color: "#555", marginBottom: 12, lineHeight: 1.6 }}
+    >
+      {order.items.map((i) => `${i.name} ×${i.quauntity}`).join(" · ")}
+    </p>
+
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <span style={{ fontSize: 12, color: "#444" }}>
+        {new Date(order.createdAt).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })}
+      </span>
+      <span style={{ fontSize: 15, fontWeight: 800, color: "#FF4D1C" }}>
+        ₹{order.totalAmount}
+      </span>
+    </div>
+  </div>
+);
+
+export default Orders;

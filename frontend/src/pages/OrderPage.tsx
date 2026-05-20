@@ -6,22 +6,33 @@ import axios from "axios";
 import { restaurantService } from "../main";
 import UserOrderMap from "../components/UserOrderMap";
 
+const STEPS = [
+  { key: "placed", label: "Order Placed", icon: "📋" },
+  { key: "accepted", label: "Accepted", icon: "✅" },
+  { key: "preparing", label: "Preparing", icon: "👨‍🍳" },
+  { key: "ready_for_rider", label: "Ready for Pickup", icon: "📦" },
+  { key: "rider_assigned", label: "Rider Assigned", icon: "🏍️" },
+  { key: "picked_up", label: "On the Way", icon: "🚀" },
+  { key: "delivered", label: "Delivered", icon: "🎉" },
+];
+
+const getStepIndex = (status: string) =>
+  STEPS.findIndex((s) => s.key === status);
+
 const OrderPage = () => {
   const { id } = useParams();
   const { socket } = useSocket();
-
   const [order, setOrder] = useState<IOrder | null>(null);
-
   const [loading, setLoading] = useState(true);
+  const [riderLocation, setRiderLocation] = useState<[number, number] | null>(
+    null,
+  );
 
   const fetchOrder = async () => {
     try {
       const { data } = await axios.get(`${restaurantService}/api/order/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-
       setOrder(data);
     } catch (error) {
       console.log(error);
@@ -36,123 +47,486 @@ const OrderPage = () => {
 
   useEffect(() => {
     if (!socket) return;
-
-    const onOrderUpdate = () => {
-      fetchOrder();
-    };
-
-    socket.on("order:update", onOrderUpdate);
-    socket.on("order:rider_assigned", onOrderUpdate);
-
+    const onUpdate = () => fetchOrder();
+    socket.on("order:update", onUpdate);
+    socket.on("order:rider_assigned", onUpdate);
     return () => {
-      socket.off("order:update", onOrderUpdate);
-      socket.off("order:rider_assigned", onOrderUpdate);
+      socket.off("order:update", onUpdate);
+      socket.off("order:rider_assigned", onUpdate);
     };
   }, [socket]);
 
   useEffect(() => {
     if (!socket || !id) return;
-
     socket.emit("join", `user:${id}`);
-
     return () => {
       socket.emit("leave", `user:${id}`);
     };
   }, [socket, id]);
 
-  const [riderLocation, setRiderLocation] = useState<[number, number] | null>(
-    null
-  );
-
   useEffect(() => {
     if (!socket) return;
-
     const onRiderLocation = ({ latitude, longitude }: any) => {
-      console.log("Rider Location:", latitude, longitude);
       setRiderLocation([latitude, longitude]);
     };
-
     socket.on("rider:location", onRiderLocation);
-
     return () => {
       socket.off("rider:location", onRiderLocation);
     };
   }, [socket]);
 
   if (loading) {
-    return <p className="text-center text-gray-500">Loading order...</p>;
+    return (
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 20px" }}>
+        <div
+          className="shimmer"
+          style={{ height: 28, width: 200, borderRadius: 8, marginBottom: 24 }}
+        />
+        <div
+          className="shimmer"
+          style={{ height: 80, borderRadius: 16, marginBottom: 16 }}
+        />
+        <div
+          className="shimmer"
+          style={{ height: 200, borderRadius: 16, marginBottom: 16 }}
+        />
+        <div className="shimmer" style={{ height: 140, borderRadius: 16 }} />
+      </div>
+    );
   }
 
   if (!order) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-gray-500">No order Found</p>
+      <div
+        style={{
+          minHeight: "60vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 12,
+        }}
+      >
+        <div style={{ fontSize: 48 }}>📦</div>
+        <p style={{ color: "#555", fontSize: 16 }}>Order not found</p>
       </div>
     );
   }
+
+  const currentStep = getStepIndex(order.status);
+  const isDelivered = order.status === "delivered";
+  const isCancelled = order.status === "cancelled";
+
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 space-y-6">
-      <h1 className="text-xl font-bold">Order #{order._id.slice(-6)}</h1>
-      <div className="rounded-lg bg-blue-50 p-3 text-sm font-medium">
-        Status: <span className="capitalize">{order.status}</span>
-      </div>
-
-      <div className="rounded-xl bg-white p-4 shadow-sm space-y-2">
-        <h2 className="font-semibold">Items</h2>
-        {order.items.map((item, i) => (
-          <div className="flex justify-between text-sm" key={i}>
-            <span>
-              {item.name} x {item.quauntity}
-            </span>
-            <span>₹{item.price * item.quauntity}</span>
+    <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 20px 60px" }}>
+      {/* Header */}
+      <div className="fade-up" style={{ marginBottom: 28 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+          }}
+        >
+          <div>
+            <h1
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                color: "#f0f0f0",
+                letterSpacing: "-0.5px",
+              }}
+            >
+              {order.restaurantName}
+            </h1>
+            <p style={{ fontSize: 12, color: "#444", marginTop: 4 }}>
+              Order #{order._id.slice(-8).toUpperCase()}
+            </p>
           </div>
-        ))}
+          <div
+            style={{
+              padding: "8px 16px",
+              borderRadius: 99,
+              fontSize: 13,
+              fontWeight: 700,
+              background: isDelivered
+                ? "rgba(34,197,94,0.12)"
+                : isCancelled
+                  ? "rgba(239,68,68,0.12)"
+                  : "rgba(255,77,28,0.12)",
+              color: isDelivered
+                ? "#4ade80"
+                : isCancelled
+                  ? "#f87171"
+                  : "#FF4D1C",
+              border: `1px solid ${isDelivered ? "rgba(34,197,94,0.25)" : isCancelled ? "rgba(239,68,68,0.25)" : "rgba(255,77,28,0.25)"}`,
+            }}
+          >
+            {isDelivered
+              ? "✓ Delivered"
+              : isCancelled
+                ? "✕ Cancelled"
+                : "● Live"}
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-xl bg-white p-4 shadow-sm space-y-1">
-        <h2 className="font-semibold">Delivery Address</h2>
-        <p className="text-sm text-gray-600">
-          {order.deliveryAddress.fromattedAddress}
-        </p>
-        <p className="text-sm text-gray-600">
-          Mobile: {order.deliveryAddress.mobile}
-        </p>
+      {/* Progress Tracker */}
+      {!isCancelled && (
+        <div
+          style={{
+            background: "#161616",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 20,
+            padding: "24px 20px",
+            marginBottom: 16,
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: "#f0f0f0",
+              marginBottom: 24,
+            }}
+          >
+            Order Progress
+          </h2>
+
+          <div style={{ position: "relative" }}>
+            {/* Track line */}
+            <div
+              style={{
+                position: "absolute",
+                top: 18,
+                left: 18,
+                right: 18,
+                height: 2,
+                background: "rgba(255,255,255,0.06)",
+                borderRadius: 99,
+              }}
+            />
+            {/* Filled track */}
+            <div
+              style={{
+                position: "absolute",
+                top: 18,
+                left: 18,
+                height: 2,
+                borderRadius: 99,
+                background: "linear-gradient(90deg, #FF4D1C, #ff8c6b)",
+                width: `${Math.max(0, (currentStep / (STEPS.length - 1)) * 100)}%`,
+                transition: "width 0.6s ease",
+              }}
+            />
+
+            {/* Steps */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                position: "relative",
+              }}
+            >
+              {STEPS.map((step, idx) => {
+                const done = idx <= currentStep;
+                const active = idx === currentStep;
+                return (
+                  <div
+                    key={step.key}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 8,
+                      flex: 1,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: active ? 18 : 14,
+                        background: done
+                          ? active
+                            ? "rgba(255,77,28,0.2)"
+                            : "rgba(255,77,28,0.1)"
+                          : "rgba(255,255,255,0.04)",
+                        border: done
+                          ? active
+                            ? "2px solid #FF4D1C"
+                            : "2px solid rgba(255,77,28,0.4)"
+                          : "2px solid rgba(255,255,255,0.08)",
+                        transition: "all 0.3s ease",
+                        boxShadow: active
+                          ? "0 0 16px rgba(255,77,28,0.3)"
+                          : "none",
+                      }}
+                    >
+                      {done ? step.icon : "○"}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: active ? 700 : 400,
+                        color: done ? (active ? "#FF4D1C" : "#888") : "#333",
+                        textAlign: "center",
+                        lineHeight: 1.3,
+                        maxWidth: 56,
+                      }}
+                    >
+                      {step.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Live Map */}
+      {(order.status === "rider_assigned" || order.status === "picked_up") && (
+        <div
+          style={{
+            background: "#161616",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 20,
+            overflow: "hidden",
+            marginBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              padding: "16px 20px",
+              borderBottom: "1px solid rgba(255,255,255,0.06)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <div className="pulse-dot" />
+            <h2 style={{ fontSize: 14, fontWeight: 600, color: "#f0f0f0" }}>
+              Live Tracking
+            </h2>
+          </div>
+          {riderLocation ? (
+            <UserOrderMap
+              riderLocation={riderLocation}
+              deliveryLocation={[
+                order.deliveryAddress.latitude!,
+                order.deliveryAddress.longitude!,
+              ]}
+            />
+          ) : (
+            <div style={{ padding: "28px 20px", textAlign: "center" }}>
+              <div
+                className="spin"
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: "50%",
+                  border: "2px solid rgba(255,77,28,0.2)",
+                  borderTopColor: "#FF4D1C",
+                  margin: "0 auto 12px",
+                }}
+              />
+              <p style={{ fontSize: 13, color: "#555" }}>
+                Connecting to rider location...
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Two col bottom */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        {/* Items */}
+        <div
+          style={{
+            background: "#161616",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 20,
+            padding: 20,
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: "#f0f0f0",
+              marginBottom: 14,
+            }}
+          >
+            Items Ordered
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {order.items.map((item, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  background: "rgba(255,255,255,0.02)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "#FF4D1C",
+                      background: "rgba(255,77,28,0.1)",
+                      padding: "2px 6px",
+                      borderRadius: 5,
+                    }}
+                  >
+                    ×{item.quauntity}
+                  </span>
+                  <span style={{ fontSize: 12, color: "#ccc" }}>
+                    {item.name}
+                  </span>
+                </div>
+                <span
+                  style={{ fontSize: 12, fontWeight: 600, color: "#f0f0f0" }}
+                >
+                  ₹{item.price * item.quauntity}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bill + Address */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Bill */}
+          <div
+            style={{
+              background: "#161616",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 20,
+              padding: 20,
+            }}
+          >
+            <h2
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#f0f0f0",
+                marginBottom: 14,
+              }}
+            >
+              Payment
+            </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {[
+                { label: "Subtotal", value: `₹${order.subtotal}` },
+                { label: "Delivery", value: `₹${order.deliveryFee}` },
+                { label: "Platform", value: `₹${order.platfromFee}` },
+              ].map(({ label, value }) => (
+                <div
+                  key={label}
+                  style={{ display: "flex", justifyContent: "space-between" }}
+                >
+                  <span style={{ fontSize: 12, color: "#555" }}>{label}</span>
+                  <span style={{ fontSize: 12, color: "#888" }}>{value}</span>
+                </div>
+              ))}
+              <div
+                style={{
+                  height: 1,
+                  background: "rgba(255,255,255,0.06)",
+                  margin: "4px 0",
+                }}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span
+                  style={{ fontSize: 14, fontWeight: 700, color: "#f0f0f0" }}
+                >
+                  Total
+                </span>
+                <span
+                  style={{ fontSize: 16, fontWeight: 800, color: "#FF4D1C" }}
+                >
+                  ₹{order.totalAmount}
+                </span>
+              </div>
+              <div
+                style={{
+                  marginTop: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                  background:
+                    order.paymentStatus === "paid"
+                      ? "rgba(34,197,94,0.08)"
+                      : "rgba(245,158,11,0.08)",
+                  border: `1px solid ${order.paymentStatus === "paid" ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)"}`,
+                }}
+              >
+                <span style={{ fontSize: 10 }}>
+                  {order.paymentStatus === "paid" ? "✓" : "⏳"}
+                </span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color:
+                      order.paymentStatus === "paid" ? "#4ade80" : "#f59e0b",
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {order.paymentStatus} · {order.paymentMethod}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Delivery address */}
+          <div
+            style={{
+              background: "#161616",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 20,
+              padding: 20,
+            }}
+          >
+            <h2
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#f0f0f0",
+                marginBottom: 12,
+              }}
+            >
+              Delivery Address
+            </h2>
+            <p style={{ fontSize: 12, color: "#888", lineHeight: 1.6 }}>
+              {order.deliveryAddress.fromattedAddress}
+            </p>
+            <p style={{ fontSize: 11, color: "#555", marginTop: 6 }}>
+              📞 {order.deliveryAddress.mobile}
+            </p>
+          </div>
+        </div>
       </div>
-
-      <div className="rounded-xl bg-white p-4 shadow-sm space-y-2">
-        <div className="flex justify-between text-sm">
-          <span>SubTotal</span> <span>₹{order.subtotal}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span>Delivery Fee</span> <span>₹{order.deliveryFee}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span>PlatForm Fee</span> <span>₹{order.platfromFee}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span>Total</span> <span>₹{order.totalAmount}</span>
-        </div>
-
-        <p className="text-xs text-gray-500">
-          Payment Method: {order.paymentMethod}
-        </p>
-        <p className="text-xs text-gray-500">
-          Payment Status: {order.paymentStatus}
-        </p>
-      </div>
-
-      {(order.status === "rider_assigned" || order.status === "picked_up") &&
-        (riderLocation ? (
-          <UserOrderMap
-            riderLocation={riderLocation}
-            deliveryLocation={[
-              order.deliveryAddress.latitude!,
-              order.deliveryAddress.longitude!,
-            ]}
-          />
-        ) : (
-          <p>Waiting for rider location</p>
-        ))}
     </div>
   );
 };

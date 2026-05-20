@@ -18,55 +18,86 @@ import Orders from "./pages/Orders";
 import OrderPage from "./pages/OrderPage";
 import RiderDashboard from "./pages/RiderDashboard";
 import Admin from "./pages/Admin";
+import LoginModal from "./components/LoginModal";
 
 const App = () => {
   const { user, loading } = useAppData();
 
   if (loading) {
     return (
-      <h1 className="text-2xl font-bold text-red-500 text-center mt-56">
-        Loading...
-      </h1>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#0d0d0d",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
+        <div
+          className="spin"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            border: "3px solid rgba(255,77,28,0.15)",
+            borderTopColor: "#FF4D1C",
+          }}
+        />
+        <p style={{ color: "#444", fontSize: 13 }}>Loading...</p>
+      </div>
     );
   }
 
-  if (user && user.role === "seller") {
-    return <Restaurant />;
-  }
-  if (user && user.role === "rider") {
-    return <RiderDashboard />;
-  }
+  if (user && user.role === "seller") return <Restaurant />;
+  if (user && user.role === "rider") return <RiderDashboard />;
+  if (user && user.role === "admin") return <Admin />;
 
-  if (user && user.role === "admin") {
-    return <Admin />;
-  }
   return (
-    <>
-      <BrowserRouter>
-        <Navbar />
-        <Routes>
-          <Route element={<PublicRoute />}>
-            <Route path="/login" element={<Login />} />
-          </Route>
-          <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Home />} />
-            <Route
-              path="/paymentsuccess/:paymentId"
-              element={<PaymentSuccess />}
-            />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/order/:id" element={<OrderPage />} />
-            <Route path="/ordersuccess" element={<OrderSuccess />} />
-            <Route path="/address" element={<AddAddressPage />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/restaurant/:id" element={<RestaurantPage />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/select-role" element={<SelectRole />} />
-            <Route path="/account" element={<Account />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </>
+    <BrowserRouter>
+      {/* LoginModal globally available */}
+      <LoginModal />
+
+      <Routes>
+        {/* Login page — NO navbar, fullscreen */}
+        <Route element={<PublicRoute />}>
+          <Route path="/login" element={<Login />} />
+        </Route>
+
+        {/* All other pages — WITH navbar */}
+        <Route
+          path="/*"
+          element={
+            <>
+              <Navbar />
+              <Routes>
+                {/* Public */}
+                <Route path="/" element={<Home />} />
+                <Route path="/restaurant/:id" element={<RestaurantPage />} />
+
+                {/* Protected */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/select-role" element={<SelectRole />} />
+                  <Route path="/account" element={<Account />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/address" element={<AddAddressPage />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/orders" element={<Orders />} />
+                  <Route path="/order/:id" element={<OrderPage />} />
+                  <Route
+                    path="/paymentsuccess/:paymentId"
+                    element={<PaymentSuccess />}
+                  />
+                  <Route path="/ordersuccess" element={<OrderSuccess />} />
+                </Route>
+              </Routes>
+            </>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 };
 

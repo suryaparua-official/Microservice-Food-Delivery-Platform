@@ -11,23 +11,23 @@ import toast from "react-hot-toast";
 import { restaurantService } from "../main";
 import L from "leaflet";
 import { LuLocateFixed } from "react-icons/lu";
-import { BiLoader, BiPlus, BiTrash } from "react-icons/bi";
-// 🔧 Fix leaflet marker icon issue
+import { BiTrash } from "react-icons/bi";
+
+// Fix leaflet marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
+
 interface Address {
   _id: string;
   formattedAddress: string;
   mobile: number;
 }
-// 📍 Click-to-select location
+
 const LocationPicker = ({
   setLocation,
 }: {
@@ -40,54 +40,93 @@ const LocationPicker = ({
   });
   return null;
 };
-// 🎯 Locate me button
+
 const LocateMeButton = ({
   onLocate,
 }: {
   onLocate: (lat: number, lng: number) => void;
 }) => {
   const map = useMap();
+  const [locating, setLocating] = useState(false);
+
   const locateUser = () => {
     if (!navigator.geolocation) {
       toast.error("Geolocation not supported");
       return;
     }
+    setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         map.flyTo([latitude, longitude], 16, { animate: true });
         onLocate(latitude, longitude);
+        setLocating(false);
       },
-      () => toast.error("Location permission denied")
+      () => {
+        toast.error("Location permission denied");
+        setLocating(false);
+      },
     );
   };
+
   return (
     <button
       onClick={locateUser}
-      className="absolute right-3 top-3 z-1000 flex items-center gap-2
-rounded-lg bg-white px-3 py-2 text-sm shadow hover:bg-gray-100"
+      style={{
+        position: "absolute",
+        top: 12,
+        right: 12,
+        zIndex: 1000,
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        padding: "9px 14px",
+        borderRadius: 10,
+        background: "rgba(13,13,13,0.85)",
+        backdropFilter: "blur(10px)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        color: "#f0f0f0",
+        fontSize: 12,
+        fontWeight: 600,
+        cursor: "pointer",
+        fontFamily: "Inter, sans-serif",
+        transition: "all 0.2s",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+      }}
     >
-      <LuLocateFixed size={16} />
-      Use current location
+      {locating ? (
+        <div
+          className="spin"
+          style={{
+            width: 14,
+            height: 14,
+            borderRadius: "50%",
+            border: "2px solid rgba(255,77,28,0.2)",
+            borderTopColor: "#FF4D1C",
+          }}
+        />
+      ) : (
+        <LuLocateFixed size={14} color="#FF4D1C" />
+      )}
+      {locating ? "Locating..." : "Use my location"}
     </button>
   );
 };
+
 const AddAddressPage = () => {
   const [addresses, setAddresses] = useState<Address[]>([]);
-
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  // 📋 Form state
   const [mobile, setMobile] = useState("");
   const [formattedAddress, setFormattedAddress] = useState("");
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
-  // 🌍 Reverse geocoding
+
   const fetchFormattedAddress = async (lat: number, lng: number) => {
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
       );
       const data = await res.json();
       setFormattedAddress(data.display_name || "");
@@ -95,18 +134,17 @@ const AddAddressPage = () => {
       toast.error("Failed to fetch address");
     }
   };
+
   const setLocation = (lat: number, lng: number) => {
     setLatitude(lat);
     setLongitude(lng);
     fetchFormattedAddress(lat, lng);
   };
-  // 📡 Fetch addresses
+
   const fetchAddresses = async () => {
     try {
       const { data } = await axios.get(`${restaurantService}/api/address/all`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setAddresses(data || []);
     } catch {
@@ -115,10 +153,11 @@ const AddAddressPage = () => {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     fetchAddresses();
   }, []);
-  // ➕ Add address
+
   const addAddress = async () => {
     if (
       !mobile ||
@@ -126,149 +165,371 @@ const AddAddressPage = () => {
       latitude === null ||
       longitude === null
     ) {
-      toast.error("Please select location on map");
+      toast.error("Please select a location on the map");
       return;
     }
     try {
       setAdding(true);
       await axios.post(
         `${restaurantService}/api/address/new`,
+        { formattedAddress, mobile, latitude, longitude },
         {
-          formattedAddress,
-          mobile,
-          latitude,
-          longitude,
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
       );
-      toast.success("Address added");
+      toast.success("Address saved");
       setMobile("");
       setFormattedAddress("");
-
       setLatitude(null);
       setLongitude(null);
       fetchAddresses();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed");
+      toast.error(error.response?.data?.message || "Failed to save");
     } finally {
       setAdding(false);
     }
   };
-  // 🗑 Delete address
+
   const deleteAddress = async (id: string) => {
     if (!window.confirm("Delete this address?")) return;
     try {
       setDeletingId(id);
       await axios.delete(`${restaurantService}/api/address/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       toast.success("Address deleted");
       fetchAddresses();
     } catch {
-      toast.error("Failed to delete address");
+      toast.error("Failed to delete");
     } finally {
       setDeletingId(null);
     }
   };
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 space-y-6">
-      <h1 className="text-2xl font-bold">Select Delivery Address</h1>
-      {/* 🗺 Map */}
-      <div
-        className="relative h-100 w-full overflow-hidden rounded-lg
-border"
-      >
-        <MapContainer
-          center={[latitude || 28.6139, longitude || 77.209]}
-          zoom={13}
-          className="h-full w-full"
-          style={{ height: "100%", width: "100%" }}
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 20px 60px" }}>
+      {/* Header */}
+      <div className="fade-up" style={{ marginBottom: 28 }}>
+        <h1
+          style={{
+            fontSize: 24,
+            fontWeight: 800,
+            color: "#f0f0f0",
+            letterSpacing: "-0.5px",
+          }}
         >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a
-href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          />
-          <LocationPicker setLocation={setLocation} />
-          <LocateMeButton onLocate={setLocation} />
-          {latitude && longitude && <Marker position={[latitude, longitude]} />}
-        </MapContainer>
+          Delivery Address
+        </h1>
+        <p style={{ fontSize: 13, color: "#555", marginTop: 4 }}>
+          Click on the map to pin your delivery location
+        </p>
       </div>
-      {/* 📍 Selected address */}
-      {formattedAddress && (
-        <div className="rounded-lg border bg-green-50 p-3 text-sm">
-          📍 {formattedAddress}
-        </div>
-      )}
-      {/* 📱 Mobile */}
-      <input
-        type="number"
-        placeholder="Mobile number"
-        value={mobile}
-        onChange={(e) => setMobile(e.target.value)}
-        className="w-full rounded-lg border px-4 py-2"
-      />
-      {/* ➕ Save */}
-      <button
-        disabled={adding}
-        onClick={addAddress}
-        className="flex items-center justify-center gap-2 rounded-lg
 
-bg-[#E23744] px-4 py-3 text-white hover:bg-[#d32f3a] disabled:opacity-
-50"
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 340px",
+          gap: 20,
+          alignItems: "start",
+        }}
       >
-        {adding ? <BiLoader className="animate-spin" /> : <BiPlus />}
-        Save Address
-      </button>
-
-      {/* 📋 Saved Addresses */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Saved Addresses</h2>
-        {loading ? (
-          <p className="text-sm text-gray-500">Loading...</p>
-        ) : addresses.length === 0 ? (
-          <p className="text-sm text-gray-500">No addresses saved</p>
-        ) : (
-          addresses.map((addr) => (
-            <div
-              key={addr._id}
-              className="flex items-center justify-between rounded-lg
-border bg-white p-3"
+        {/* Left — Map + Form */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* Map */}
+          <div
+            style={{
+              borderRadius: 20,
+              overflow: "hidden",
+              border: "1px solid rgba(255,255,255,0.08)",
+              position: "relative",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+            }}
+          >
+            <MapContainer
+              center={[latitude || 28.6139, longitude || 77.209]}
+              zoom={13}
+              style={{ height: 380, width: "100%" }}
             >
-              <div>
-                <p
-                  className="text-sm font-
-medium"
-                >
-                  {addr.formattedAddress}
-                </p>
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution="&copy; OpenStreetMap"
+              />
+              <LocationPicker setLocation={setLocation} />
+              <LocateMeButton onLocate={setLocation} />
+              {latitude && longitude && (
+                <Marker position={[latitude, longitude]} />
+              )}
+            </MapContainer>
+          </div>
 
-                <p className="text-xs text-gray-500">
-                  📞
-                  {addr.mobile}
-                </p>
-              </div>
-              <button
-                onClick={() => deleteAddress(addr._id)}
-                disabled={deletingId === addr._id}
-                className="rounded-lg p-2 text-red-500 hover:bg-red-50
-disabled:opacity-50"
-              >
-                {deletingId === addr._id ? (
-                  <BiLoader size={16} className="animate-spin" />
-                ) : (
-                  <BiTrash size={16} />
-                )}
-              </button>
+          {/* Selected address preview */}
+          {formattedAddress ? (
+            <div
+              style={{
+                padding: "14px 16px",
+                borderRadius: 14,
+                background: "rgba(255,77,28,0.07)",
+                border: "1px solid rgba(255,77,28,0.2)",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 10,
+              }}
+            >
+              <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>
+                📍
+              </span>
+              <p style={{ fontSize: 13, color: "#ccc", lineHeight: 1.6 }}>
+                {formattedAddress}
+              </p>
             </div>
-          ))
-        )}
+          ) : (
+            <div
+              style={{
+                padding: "14px 16px",
+                borderRadius: 14,
+                background: "rgba(255,255,255,0.02)",
+                border: "1px dashed rgba(255,255,255,0.08)",
+                textAlign: "center",
+              }}
+            >
+              <p style={{ fontSize: 13, color: "#444" }}>
+                👆 Click anywhere on the map to select your location
+              </p>
+            </div>
+          )}
+
+          {/* Mobile input */}
+          <div style={{ position: "relative" }}>
+            <div
+              style={{
+                position: "absolute",
+                left: 14,
+                top: "50%",
+                transform: "translateY(-50%)",
+                fontSize: 16,
+              }}
+            >
+              📞
+            </div>
+            <input
+              type="number"
+              placeholder="Mobile number"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+              className="input-dark"
+              style={{ paddingLeft: 44, paddingRight: 14, height: 50 }}
+            />
+          </div>
+
+          {/* Save button */}
+          <button
+            disabled={adding || !formattedAddress || !mobile}
+            onClick={addAddress}
+            className="btn-accent"
+            style={{
+              width: "100%",
+              padding: "15px",
+              fontSize: 14,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            {adding ? (
+              <>
+                <div
+                  className="spin"
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: "50%",
+                    border: "2px solid rgba(255,255,255,0.2)",
+                    borderTopColor: "#fff",
+                  }}
+                />
+                Saving...
+              </>
+            ) : (
+              "＋  Save Address"
+            )}
+          </button>
+        </div>
+
+        {/* Right — Saved addresses */}
+        <div
+          style={{
+            position: "sticky",
+            top: 84,
+            background: "#161616",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 20,
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 16,
+            }}
+          >
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: "#f0f0f0" }}>
+              Saved Addresses
+            </h2>
+            {addresses.length > 0 && (
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#FF4D1C",
+                  background: "rgba(255,77,28,0.1)",
+                  padding: "3px 9px",
+                  borderRadius: 99,
+                }}
+              >
+                {addresses.length}
+              </span>
+            )}
+          </div>
+
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="shimmer"
+                  style={{ height: 72, borderRadius: 12 }}
+                />
+              ))}
+            </div>
+          ) : addresses.length === 0 ? (
+            <div
+              style={{
+                padding: "32px 16px",
+                textAlign: "center",
+                borderRadius: 14,
+                background: "rgba(255,255,255,0.02)",
+                border: "1px dashed rgba(255,255,255,0.06)",
+              }}
+            >
+              <div style={{ fontSize: 32, marginBottom: 10 }}>🗺️</div>
+              <p style={{ fontSize: 13, color: "#444" }}>
+                No addresses saved yet
+              </p>
+              <p style={{ fontSize: 11, color: "#333", marginTop: 4 }}>
+                Pin a location on the map
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {addresses.map((addr) => (
+                <div
+                  key={addr._id}
+                  style={{
+                    padding: "14px",
+                    borderRadius: 14,
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "flex-start",
+                    transition: "border 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLDivElement).style.borderColor =
+                      "rgba(255,255,255,0.1)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLDivElement).style.borderColor =
+                      "rgba(255,255,255,0.06)";
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 9,
+                      background: "rgba(255,77,28,0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 15,
+                      flexShrink: 0,
+                    }}
+                  >
+                    📍
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p
+                      style={{
+                        fontSize: 12,
+                        color: "#ccc",
+                        lineHeight: 1.5,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        marginBottom: 5,
+                      }}
+                    >
+                      {addr.formattedAddress}
+                    </p>
+                    <p style={{ fontSize: 11, color: "#555" }}>
+                      📞 {addr.mobile}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => deleteAddress(addr._id)}
+                    disabled={deletingId === addr._id}
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 8,
+                      background: "rgba(239,68,68,0.08)",
+                      border: "1px solid rgba(239,68,68,0.15)",
+                      color: "#f87171",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor:
+                        deletingId === addr._id ? "not-allowed" : "pointer",
+                      flexShrink: 0,
+                      transition: "all 0.2s",
+                      opacity: deletingId === addr._id ? 0.5 : 1,
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background =
+                        "rgba(239,68,68,0.15)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background =
+                        "rgba(239,68,68,0.08)";
+                    }}
+                  >
+                    {deletingId === addr._id ? (
+                      <div
+                        className="spin"
+                        style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: "50%",
+                          border: "1.5px solid rgba(239,68,68,0.2)",
+                          borderTopColor: "#f87171",
+                        }}
+                      />
+                    ) : (
+                      <BiTrash size={13} />
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

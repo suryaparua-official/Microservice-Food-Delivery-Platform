@@ -5,46 +5,79 @@ import axios from "axios";
 import { restaurantService } from "../main";
 import toast from "react-hot-toast";
 
-interface props {
+interface Props {
   order: IOrder;
   onStatusUpdate?: () => void;
 }
 
-const statusColor = (status: string) => {
-  switch (status) {
-    case "placed":
-      return "bg-yellow-100 text-yellow-700";
-    case "accepted":
-      return "bg-orange-100 text-orange-700";
-    case "preparing":
-      return "bg-blue-100 text-blue-700";
-    case "ready_for_rider":
-      return "bg-indigo-100 text-indigo-700";
-    case "picked_up":
-      return "bg-purple-100 text-purple-700";
-    case "delivered":
-      return "bg-green-100 text-green-700";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; color: string; bg: string }
+> = {
+  placed: {
+    label: "Order Placed",
+    color: "#f59e0b",
+    bg: "rgba(245,158,11,0.12)",
+  },
+  accepted: {
+    label: "Accepted",
+    color: "#f97316",
+    bg: "rgba(249,115,22,0.12)",
+  },
+  preparing: {
+    label: "Preparing",
+    color: "#60a5fa",
+    bg: "rgba(59,130,246,0.12)",
+  },
+  ready_for_rider: {
+    label: "Ready for Rider",
+    color: "#818cf8",
+    bg: "rgba(99,102,241,0.12)",
+  },
+  rider_assigned: {
+    label: "Rider Assigned",
+    color: "#c084fc",
+    bg: "rgba(168,85,247,0.12)",
+  },
+  picked_up: {
+    label: "Picked Up",
+    color: "#2dd4bf",
+    bg: "rgba(20,184,166,0.12)",
+  },
+  delivered: {
+    label: "Delivered",
+    color: "#4ade80",
+    bg: "rgba(34,197,94,0.12)",
+  },
+  cancelled: {
+    label: "Cancelled",
+    color: "#f87171",
+    bg: "rgba(239,68,68,0.12)",
+  },
 };
 
-const OrderCard = ({ order, onStatusUpdate }: props) => {
+const ACTION_LABELS: Record<string, string> = {
+  accepted: "Accept Order",
+  preparing: "Start Preparing",
+  ready_for_rider: "Mark Ready",
+};
+
+const OrderCard = ({ order, onStatusUpdate }: Props) => {
   const [loading, setLoading] = useState(false);
   const [retryVisible, setRetryVisible] = useState(false);
-
   const actions = ORDER_ACTIONS[order.status] || [];
+  const config = STATUS_CONFIG[order.status] || {
+    label: order.status,
+    color: "#888",
+    bg: "rgba(255,255,255,0.06)",
+  };
 
   useEffect(() => {
     if (order.status !== "ready_for_rider") {
       setRetryVisible(false);
       return;
     }
-
-    const timer = setTimeout(() => {
-      setRetryVisible(true);
-    }, 10000);
-
+    const timer = setTimeout(() => setRetryVisible(true), 10000);
     return () => clearTimeout(timer);
   }, [order.status]);
 
@@ -56,73 +89,231 @@ const OrderCard = ({ order, onStatusUpdate }: props) => {
         `${restaurantService}/api/order/${order._id}`,
         { status },
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
       );
-
       toast.success("Order updated");
       onStatusUpdate?.();
     } catch (error: any) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Failed to update");
     } finally {
       setLoading(false);
     }
   };
-  return (
-    <div className="rounded-xl bg-white p-4 shadow-sm space-y-3">
-      <div className="flex justify-between items-center">
-        <p className="text-sm font-medium">Order #{order._id.slice(-6)}</p>
 
+  return (
+    <div
+      style={{
+        background: "#161616",
+        border: "1px solid rgba(255,255,255,0.07)",
+        borderRadius: 18,
+        padding: 20,
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+        transition: "border 0.2s",
+      }}
+    >
+      {/* Top row */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+        }}
+      >
+        <div>
+          <p
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: "#f0f0f0",
+              marginBottom: 3,
+            }}
+          >
+            #{order._id.slice(-8).toUpperCase()}
+          </p>
+          <p style={{ fontSize: 11, color: "#444" }}>
+            {new Date(order.createdAt).toLocaleTimeString("en-IN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        </div>
         <span
-          className={`rounded-full px-3 py-1 text-xs font-medium ${statusColor(
-            order.status
-          )}`}
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: config.color,
+            background: config.bg,
+            padding: "5px 12px",
+            borderRadius: 99,
+            letterSpacing: "0.03em",
+            textTransform: "uppercase",
+          }}
         >
-          {order.status.replaceAll("_", " ")}
+          {config.label}
         </span>
       </div>
 
-      <div className="text-sm text-gray-600 space-y-1">
+      {/* Items */}
+      <div
+        style={{
+          padding: "12px 14px",
+          borderRadius: 12,
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.04)",
+        }}
+      >
         {order.items.map((item, i) => (
-          <p key={i}>
-            {item.name} x {item.quauntity}
-          </p>
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "4px 0",
+              borderBottom:
+                i < order.items.length - 1
+                  ? "1px solid rgba(255,255,255,0.04)"
+                  : "none",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "#FF4D1C",
+                  background: "rgba(255,77,28,0.1)",
+                  padding: "1px 6px",
+                  borderRadius: 5,
+                }}
+              >
+                ×{item.quauntity}
+              </span>
+              <span style={{ fontSize: 12, color: "#ccc" }}>{item.name}</span>
+            </div>
+            <span style={{ fontSize: 12, color: "#666" }}>
+              ₹{item.price * item.quauntity}
+            </span>
+          </div>
         ))}
       </div>
 
-      <div className="flex justify-between text-sm font-medium">
-        <span>Total</span>
-        <span>₹{order.totalAmount}</span>
+      {/* Footer */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              padding: "3px 8px",
+              borderRadius: 6,
+              background:
+                order.paymentStatus === "paid"
+                  ? "rgba(34,197,94,0.1)"
+                  : "rgba(245,158,11,0.1)",
+              color: order.paymentStatus === "paid" ? "#4ade80" : "#f59e0b",
+              textTransform: "capitalize",
+            }}
+          >
+            {order.paymentStatus}
+          </span>
+        </div>
+        <span style={{ fontSize: 16, fontWeight: 800, color: "#FF4D1C" }}>
+          ₹{order.totalAmount}
+        </span>
       </div>
 
-      <p className="text-xs text-gray-400">Payment: {order.paymentStatus}</p>
-
+      {/* Action buttons */}
       {order.paymentStatus === "paid" && actions.length > 0 && (
-        <div className="flex flex-wrap gap-2 pt-2">
-          {actions.map((status) => (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {actions.map((status: string) => (
             <button
               key={status}
               disabled={loading}
               onClick={() => updateStatus(status)}
-              className="rounded-lg bg-[#e23744] px-3 py-1 text-xs text-white hover:bg-[#d32f3a] disabled:opacity-50"
+              style={{
+                flex: 1,
+                padding: "10px 14px",
+                borderRadius: 10,
+                background: "rgba(255,77,28,0.1)",
+                border: "1px solid rgba(255,77,28,0.25)",
+                color: "#FF4D1C",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: loading ? "not-allowed" : "pointer",
+                fontFamily: "Inter, sans-serif",
+                transition: "all 0.2s",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                opacity: loading ? 0.5 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (!loading)
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    "rgba(255,77,28,0.18)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background =
+                  "rgba(255,77,28,0.1)";
+              }}
             >
-              Mark as {status.replaceAll("_", " ")}
+              {loading ? (
+                <div
+                  className="spin"
+                  style={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: "50%",
+                    border: "1.5px solid rgba(255,77,28,0.2)",
+                    borderTopColor: "#FF4D1C",
+                  }}
+                />
+              ) : null}
+              {ACTION_LABELS[status] || status.replaceAll("_", " ")}
             </button>
           ))}
         </div>
       )}
 
+      {/* Retry button */}
       {order.status === "ready_for_rider" && retryVisible && (
-        <div className="pt-2">
-          <button
-            className="w-full rounded-lg border border-[#e23744] py-2 text-xs font-semibold text-[#e23744] hover:bg-red-50 disabled:opacity-50"
-            onClick={() => updateStatus("ready_for_rider")}
-          >
-            Retry Ready for Rider
-          </button>
-        </div>
+        <button
+          onClick={() => updateStatus("ready_for_rider")}
+          style={{
+            width: "100%",
+            padding: "10px",
+            borderRadius: 10,
+            background: "transparent",
+            border: "1px dashed rgba(255,77,28,0.3)",
+            color: "#FF4D1C",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: "pointer",
+            fontFamily: "Inter, sans-serif",
+            transition: "all 0.2s",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background =
+              "rgba(255,77,28,0.06)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background =
+              "transparent";
+          }}
+        >
+          ↻ Retry — Find Rider
+        </button>
       )}
     </div>
   );

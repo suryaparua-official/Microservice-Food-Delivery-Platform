@@ -5,8 +5,8 @@ import { restaurantService, utilsService } from "../main";
 import { useNavigate } from "react-router-dom";
 import type { ICart, IMenuItem, IRestaurant } from "../types";
 import toast from "react-hot-toast";
-import { BiCreditCard, BiLoader } from "react-icons/bi";
 import { loadStripe } from "@stripe/stripe-js";
+import { BiMapPin } from "react-icons/bi";
 
 interface Address {
   _id: string;
@@ -16,18 +16,15 @@ interface Address {
 
 const Checkout = () => {
   const { cart, subTotal, quauntity } = useAppData();
-
   const [addresses, setAddresses] = useState<Address[]>([]);
-
-  const [selectedAddressId, setselectedAddressId] = useState<string | null>(
-    null
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    null,
   );
-
   const [loadingAddress, setLoadingAddress] = useState(true);
-
   const [loadingRazorpay, setLoadingRazorpay] = useState(false);
   const [loadingStripe, setLoadingStripe] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchAddresses = async () => {
@@ -35,7 +32,6 @@ const Checkout = () => {
         setLoadingAddress(false);
         return;
       }
-
       try {
         const { data } = await axios.get(
           `${restaurantService}/api/address/all`,
@@ -43,9 +39,8 @@ const Checkout = () => {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-          }
+          },
         );
-
         setAddresses(data || []);
       } catch (error) {
         console.log(error);
@@ -53,49 +48,44 @@ const Checkout = () => {
         setLoadingAddress(false);
       }
     };
-
     fetchAddresses();
   }, [cart]);
 
-  const navigate = useNavigate();
-
   if (!cart || cart.length === 0) {
     return (
-      <div className="flex min-h-[60vh] item-center justify-center">
-        <p className="text-gray-500 text-lg">Your cart is empty</p>
+      <div
+        style={{
+          minHeight: "70vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <p style={{ color: "#555", fontSize: 16 }}>Your cart is empty</p>
       </div>
     );
   }
 
   const restaurant = cart[0].restaurantId as IRestaurant;
-
   const deliveryFee = subTotal < 250 ? 49 : 0;
-
   const platformFee = 7;
-
   const grandTotal = subTotal + deliveryFee + platformFee;
 
   const createOrder = async (paymentMethod: "razorpay" | "stripe") => {
     if (!selectedAddressId) return null;
-
     setCreatingOrder(true);
     try {
       const { data } = await axios.post(
         `${restaurantService}/api/order/new`,
+        { paymentMethod, addressId: selectedAddressId },
         {
-          paymentMethod,
-          addressId: selectedAddressId,
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
       );
-
       return data;
-    } catch (error) {
-      toast.error("Failed to create Order");
+    } catch {
+      toast.error("Failed to create order");
+      return null;
     } finally {
       setCreatingOrder(false);
     }
@@ -104,26 +94,20 @@ const Checkout = () => {
   const payWithRazorpay = async () => {
     try {
       setLoadingRazorpay(true);
-
       const order = await createOrder("razorpay");
       if (!order) return;
-
       const { orderId, amount } = order;
-
       const { data } = await axios.post(`${utilsService}/api/payment/create`, {
         orderId,
       });
-
       const { razorpayOrderId, key } = data;
-
       const options = {
         key,
         amount: amount * 100,
         currency: "INR",
-        name: "Swiggy", //your business name
+        name: "Tomato",
         description: "Food Order Payment",
         order_id: razorpayOrderId,
-
         handler: async (response: any) => {
           try {
             await axios.post(`${utilsService}/api/payment/verify`, {
@@ -132,23 +116,18 @@ const Checkout = () => {
               razorpay_signature: response.razorpay_signature,
               orderId,
             });
-
-            toast.success("Payment successfull 🎉");
+            toast.success("Payment successful 🎉");
             navigate("/paymentsuccess/" + response.razorpay_payment_id);
-          } catch (error) {
+          } catch {
             toast.error("Payment verification failed");
           }
         },
-        theme: {
-          color: "#E23744",
-        },
+        theme: { color: "#FF4D1C" },
       };
-
       const razorpay = new (window as any).Razorpay(options);
       razorpay.open();
-    } catch (error) {
-      console.log(error);
-      toast.error("Payment Failed please refresh page");
+    } catch {
+      toast.error("Payment failed. Please try again.");
     } finally {
       setLoadingRazorpay(false);
     }
@@ -161,152 +140,488 @@ const Checkout = () => {
       setLoadingStripe(true);
       const order = await createOrder("stripe");
       if (!order) return;
-
       const { orderId } = order;
-
-      try {
-        await stripePromise;
-
-        const { data } = await axios.post(
-          `${utilsService}/api/payment/stripe/create`,
-          {
-            orderId,
-          }
-        );
-
-        if (data.url) {
-          window.location.href = data.url;
-        } else {
-          toast.error("failed to create payment session");
-        }
-      } catch (error) {
-        toast.error("Payment Failed");
-      }
-    } catch (error) {
-      console.log(error);
+      await stripePromise;
+      const { data } = await axios.post(
+        `${utilsService}/api/payment/stripe/create`,
+        { orderId },
+      );
+      if (data.url) window.location.href = data.url;
+      else toast.error("Failed to create payment session");
+    } catch {
       toast.error("Payment failed");
     } finally {
       setLoadingStripe(false);
     }
   };
-  return (
-    <div className="mx-auto max-w-4xl px-4 py-6 space-y-6">
-      <h1 className="text-2xl font-bold">Checkout</h1>
 
-      <div className="rounded-xl bg-white p-4 shadow-sm">
-        <h2 className="text-lg font-semibold">{restaurant.name}</h2>
-        <p className="text-sm text-gray-500">
-          {restaurant.autoLocation.formattedAddress}
+  const anyLoading = loadingRazorpay || loadingStripe || creatingOrder;
+
+  return (
+    <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 20px 60px" }}>
+      {/* Header */}
+      <div className="fade-up" style={{ marginBottom: 32 }}>
+        <h1
+          style={{
+            fontSize: 24,
+            fontWeight: 800,
+            color: "#f0f0f0",
+            letterSpacing: "-0.5px",
+          }}
+        >
+          Checkout
+        </h1>
+        <p style={{ fontSize: 13, color: "#555", marginTop: 4 }}>
+          {restaurant.name}
         </p>
       </div>
 
-      <div className="rounded-xl bg-white p-4 shadow-sm space-y-3">
-        <h3 className="font-semibold">Delivery Address</h3>
-
-        {loadingAddress ? (
-          <p className="text-sm text-gray-500">Loading addresses...</p>
-        ) : addresses.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            No address found. Please add one
-          </p>
-        ) : (
-          addresses.map((add) => (
-            <label
-              key={add._id}
-              className={`flex gap-3 rounded-lg border p-3 cursor-pointer transition ${
-                selectedAddressId === add._id
-                  ? "border-[#e23744] bg-red-50"
-                  : "hover:bg-gray-50"
-              }`}
-            >
-              <input
-                type="radio"
-                checked={selectedAddressId === add._id}
-                onChange={() => setselectedAddressId(add._id)}
-              />
-              <div>
-                <p className="text-sm font-medium">{add.formattedAddress}</p>
-                <p className="text-xs text-gray-500">{add.mobile}</p>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 320px",
+          gap: 20,
+          alignItems: "start",
+        }}
+      >
+        {/* Left column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Delivery Address */}
+          <Section title="Delivery Address">
+            {loadingAddress ? (
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 10 }}
+              >
+                {[1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="shimmer"
+                    style={{ height: 64, borderRadius: 12 }}
+                  />
+                ))}
               </div>
-            </label>
-          ))
-        )}
-      </div>
+            ) : addresses.length === 0 ? (
+              <div
+                style={{
+                  padding: "20px",
+                  textAlign: "center",
+                  borderRadius: 12,
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px dashed rgba(255,255,255,0.08)",
+                }}
+              >
+                <p style={{ color: "#555", fontSize: 13, marginBottom: 12 }}>
+                  No saved addresses
+                </p>
+                <button
+                  onClick={() => navigate("/address")}
+                  style={{
+                    fontSize: 13,
+                    color: "#FF4D1C",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: "Inter, sans-serif",
+                    textDecoration: "underline",
+                  }}
+                >
+                  Add a new address →
+                </button>
+              </div>
+            ) : (
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 10 }}
+              >
+                {addresses.map((addr) => {
+                  const selected = selectedAddressId === addr._id;
+                  return (
+                    <div
+                      key={addr._id}
+                      onClick={() => setSelectedAddressId(addr._id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 12,
+                        padding: "14px 16px",
+                        borderRadius: 12,
+                        background: selected
+                          ? "rgba(255,77,28,0.08)"
+                          : "rgba(255,255,255,0.02)",
+                        border: selected
+                          ? "1px solid rgba(255,77,28,0.35)"
+                          : "1px solid rgba(255,255,255,0.07)",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 9,
+                          background: selected
+                            ? "rgba(255,77,28,0.15)"
+                            : "rgba(255,255,255,0.04)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          marginTop: 1,
+                        }}
+                      >
+                        <BiMapPin
+                          size={16}
+                          color={selected ? "#FF4D1C" : "#555"}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <p
+                          style={{
+                            fontSize: 13,
+                            color: "#f0f0f0",
+                            fontWeight: 500,
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          {addr.formattedAddress}
+                        </p>
+                        <p
+                          style={{ fontSize: 11, color: "#555", marginTop: 3 }}
+                        >
+                          📞 {addr.mobile}
+                        </p>
+                      </div>
+                      <div
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: "50%",
+                          border: selected
+                            ? "2px solid #FF4D1C"
+                            : "2px solid rgba(255,255,255,0.15)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          marginTop: 2,
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        {selected && (
+                          <div
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: "50%",
+                              background: "#FF4D1C",
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Section>
 
-      <div className="rounded-xl bg-white p-4 shadow-sm space-y-4">
-        <h3 className="font-semibold">Order Summary</h3>
-
-        {cart.map((cartItem: ICart) => {
-          const item = cartItem.itemId as IMenuItem;
-
-          return (
-            <div className="flex justify-between text-sm" key={cartItem._id}>
-              <span>
-                {item.name} x {cartItem.quauntity}
-              </span>
-              <span>₹{item.price * cartItem.quauntity}</span>
+          {/* Order Items */}
+          <Section title="Order Summary">
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {cart.map((cartItem: ICart) => {
+                const item = cartItem.itemId as IMenuItem;
+                return (
+                  <div
+                    key={cartItem._id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      background: "rgba(255,255,255,0.02)",
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 10 }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "#FF4D1C",
+                          background: "rgba(255,77,28,0.1)",
+                          padding: "2px 7px",
+                          borderRadius: 6,
+                        }}
+                      >
+                        ×{cartItem.quauntity}
+                      </span>
+                      <span style={{ fontSize: 13, color: "#ccc" }}>
+                        {item.name}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: "#f0f0f0",
+                      }}
+                    >
+                      ₹{item.price * cartItem.quauntity}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          </Section>
 
-        <hr />
-
-        <div className="flex justify-between text-sm">
-          <span>Items ({quauntity})</span>
-          <span>₹{subTotal}</span>
+          {/* Payment */}
+          <Section title="Payment Method">
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <PayBtn
+                label="Pay with Razorpay"
+                sublabel="UPI · Cards · Netbanking · Wallets"
+                emoji="💳"
+                color="#2D7FF9"
+                loading={loadingRazorpay}
+                disabled={!selectedAddressId || anyLoading}
+                onClick={payWithRazorpay}
+              />
+              <PayBtn
+                label="Pay with Stripe"
+                sublabel="International cards accepted"
+                emoji="🌐"
+                color="#635BFF"
+                loading={loadingStripe}
+                disabled={!selectedAddressId || anyLoading}
+                onClick={payWithStripe}
+              />
+              {!selectedAddressId && (
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: "#555",
+                    textAlign: "center",
+                    paddingTop: 4,
+                  }}
+                >
+                  Select a delivery address to enable payment
+                </p>
+              )}
+            </div>
+          </Section>
         </div>
-        <div className="flex justify-between text-sm">
-          <span>Delivery Fee</span>
-          <span>{deliveryFee === 0 ? "Free" : `₹${deliveryFee}`}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span>PlatForm Fee</span>
-          <span>₹{platformFee}</span>
-        </div>
 
-        {subTotal < 250 && (
-          <p className="text-xs text-gray-500">
-            Add Item worth ₹{250 - subTotal} more to get Free delivery
-          </p>
-        )}
-
-        <div className="flex justify-between text-base font-semibold border-t pt-2">
-          <span>Grand Total</span>
-          <span>₹{grandTotal}</span>
-        </div>
-      </div>
-
-      <div className="rounded-xl bg-white p-4 shadow-sm space-y-3">
-        <h3 className="font-semibold">Payment Method</h3>
-
-        <button
-          disabled={!selectedAddressId || loadingRazorpay || creatingOrder}
-          onClick={payWithRazorpay}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#2D7FF9] py-3 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+        {/* Right — Bill */}
+        <div
+          style={{
+            position: "sticky",
+            top: 84,
+            background: "#161616",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 20,
+            padding: 24,
+          }}
         >
-          {loadingRazorpay ? (
-            <BiLoader size={18} className="animate-spin" />
-          ) : (
-            <BiCreditCard size={18} />
-          )}
-          Pay With Razorpay
-        </button>
+          <h2
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: "#f0f0f0",
+              marginBottom: 20,
+            }}
+          >
+            Bill Summary
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <BillRow label={`Items (${quauntity})`} value={`₹${subTotal}`} />
+            <BillRow
+              label="Delivery Fee"
+              value={deliveryFee === 0 ? "Free 🎉" : `₹${deliveryFee}`}
+              valueColor={deliveryFee === 0 ? "#4ade80" : undefined}
+            />
+            <BillRow label="Platform Fee" value={`₹${platformFee}`} />
 
-        <button
-          disabled={!selectedAddressId || loadingStripe || creatingOrder}
-          onClick={payWithStripe}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-black py-3 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
-        >
-          {loadingRazorpay ? (
-            <BiLoader size={18} className="animate-spin" />
-          ) : (
-            <BiCreditCard size={18} />
-          )}
-          Pay With Stripe
-        </button>
+            {subTotal < 250 && (
+              <div
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  background: "rgba(255,77,28,0.07)",
+                  border: "1px solid rgba(255,77,28,0.15)",
+                }}
+              >
+                <p style={{ fontSize: 11, color: "#FF4D1C" }}>
+                  Add ₹{250 - subTotal} more for free delivery
+                </p>
+              </div>
+            )}
+
+            <div style={{ height: 1, background: "rgba(255,255,255,0.07)" }} />
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span style={{ fontSize: 16, fontWeight: 700, color: "#f0f0f0" }}>
+                Total
+              </span>
+              <span style={{ fontSize: 20, fontWeight: 800, color: "#FF4D1C" }}>
+                ₹{grandTotal}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
+
+/* ── Sub-components ── */
+
+const Section = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <div
+    style={{
+      background: "#161616",
+      border: "1px solid rgba(255,255,255,0.07)",
+      borderRadius: 20,
+      padding: 24,
+    }}
+  >
+    <h3
+      style={{
+        fontSize: 15,
+        fontWeight: 700,
+        color: "#f0f0f0",
+        marginBottom: 16,
+      }}
+    >
+      {title}
+    </h3>
+    {children}
+  </div>
+);
+
+const BillRow = ({
+  label,
+  value,
+  valueColor,
+}: {
+  label: string;
+  value: string;
+  valueColor?: string;
+}) => (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+    }}
+  >
+    <span style={{ fontSize: 13, color: "#666" }}>{label}</span>
+    <span
+      style={{ fontSize: 13, fontWeight: 600, color: valueColor || "#f0f0f0" }}
+    >
+      {value}
+    </span>
+  </div>
+);
+
+const PayBtn = ({
+  label,
+  sublabel,
+  emoji,
+  color,
+  loading,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  sublabel: string;
+  emoji: string;
+  color: string;
+  loading: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    disabled={disabled}
+    onClick={onClick}
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 14,
+      padding: "16px 18px",
+      borderRadius: 14,
+      background: disabled ? "rgba(255,255,255,0.02)" : `${color}14`,
+      border: `1px solid ${disabled ? "rgba(255,255,255,0.06)" : color + "40"}`,
+      cursor: disabled ? "not-allowed" : "pointer",
+      transition: "all 0.2s",
+      width: "100%",
+      fontFamily: "Inter, sans-serif",
+      opacity: disabled ? 0.5 : 1,
+    }}
+    onMouseEnter={(e) => {
+      if (!disabled)
+        (e.currentTarget as HTMLButtonElement).style.background = `${color}22`;
+    }}
+    onMouseLeave={(e) => {
+      if (!disabled)
+        (e.currentTarget as HTMLButtonElement).style.background = `${color}14`;
+    }}
+  >
+    <div
+      style={{
+        width: 42,
+        height: 42,
+        borderRadius: 10,
+        background: `${color}20`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 20,
+        flexShrink: 0,
+      }}
+    >
+      {loading ? (
+        <div
+          className="spin"
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: "50%",
+            border: `2px solid ${color}40`,
+            borderTopColor: color,
+          }}
+        />
+      ) : (
+        emoji
+      )}
+    </div>
+    <div style={{ textAlign: "left" }}>
+      <p
+        style={{
+          fontSize: 14,
+          fontWeight: 600,
+          color: "#f0f0f0",
+          marginBottom: 2,
+        }}
+      >
+        {loading ? "Processing..." : label}
+      </p>
+      <p style={{ fontSize: 11, color: "#555" }}>{sublabel}</p>
+    </div>
+  </button>
+);
 
 export default Checkout;
