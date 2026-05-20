@@ -42,6 +42,8 @@ services:
       context: ./services/auth
       dockerfile: Dockerfile
     container_name: tomato-auth
+    env_file:
+      - .env
     ports:
       - "5000:5000"
     environment:
@@ -64,6 +66,8 @@ services:
       context: ./services/restaurant
       dockerfile: Dockerfile
     container_name: tomato-restaurant
+    env_file:
+      - .env
     ports:
       - "5001:5001"
     environment:
@@ -93,6 +97,8 @@ services:
       context: ./services/utils
       dockerfile: Dockerfile
     container_name: tomato-utils
+    env_file:
+      - .env
     ports:
       - "5002:5002"
     environment:
@@ -121,6 +127,8 @@ services:
       context: ./services/realtime
       dockerfile: Dockerfile
     container_name: tomato-realtime
+    env_file:
+      - .env
     ports:
       - "5004:5004"
     environment:
@@ -137,6 +145,8 @@ services:
       context: ./services/rider
       dockerfile: Dockerfile
     container_name: tomato-rider
+    env_file:
+      - .env
     ports:
       - "5005:5005"
     environment:
@@ -165,6 +175,8 @@ services:
       context: ./services/admin
       dockerfile: Dockerfile
     container_name: tomato-admin
+    env_file:
+      - .env
     ports:
       - "5006:5006"
     environment:
@@ -198,9 +210,11 @@ services:
         - VITE_ADMIN_URL=http://localhost:5006
         - VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
         - VITE_RAZORPAY_KEY=${RAZORPAY_KEY_ID}
-        - VITE_STRIPE_PUBLIC_KEY=${STRIPE_PUBLISHABLE_KEY}
+        - VITE_STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
         - VITE_INTERNAL_SERVICE_KEY=${INTERNAL_SERVICE_KEY}
     container_name: tomato-frontend
+    env_file:
+      - .env
     ports:
       - "3000:80"
     depends_on:

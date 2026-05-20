@@ -12,6 +12,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   const { setUser, setIsAuth } = useAppData();
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   const responseGoogle = async (authResult: any) => {
     setLoading(true);
@@ -50,13 +51,21 @@ const Login = () => {
         </p>
 
         <button
-          onClick={googleLogin}
-          disabled={loading}
+          onClick={googleClientId ? googleLogin : undefined}
+          disabled={loading || !googleClientId}
           className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-300 bg-white px-4 py-3"
         >
           <FcGoogle size={20} />
           {loading ? "Signing in ..." : "Continue with Google"}
         </button>
+
+        {!googleClientId && (
+          <p className="text-center text-sm text-red-500">
+            Google OAuth is not configured. Set `VITE_GOOGLE_CLIENT_ID` in
+            `frontend/.env` for local development, or add `GOOGLE_CLIENT_ID` to
+            the root `.env` used by Docker Compose.
+          </p>
+        )}
 
         <p className="text-center text-xs text-gray-400">
           By continuing, you agree with our{" "}

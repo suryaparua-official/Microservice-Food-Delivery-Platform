@@ -39,6 +39,15 @@ docker compose up --build
    - `http://localhost:5173`
 7. Copy **Client ID** and **Client Secret**
 
+> If you run the frontend with `npm run dev` directly, create `frontend/.env` and add:
+>
+> `VITE_GOOGLE_CLIENT_ID=your_google_client_id`
+>
+> If you run via Docker Compose, use the root `.env` file and set both:
+>
+> `GOOGLE_CLIENT_ID=your_google_client_id`
+> `VITE_GOOGLE_CLIENT_ID=your_google_client_id`
+
 ### Cloudinary (Required for images)
 
 1. Create free account at [cloudinary.com](https://cloudinary.com)

@@ -20,9 +20,18 @@ export const riderService =
 export const adminService =
   import.meta.env.VITE_ADMIN_URL ?? "http://localhost:5006";
 
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+if (!googleClientId) {
+  console.error(
+    "Missing VITE_GOOGLE_CLIENT_ID. Set this variable in frontend/.env for local development or in the root .env for Docker Compose.",
+  );
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+    <GoogleOAuthProvider
+      clientId={googleClientId || "GOOGLE_CLIENT_ID_NOT_SET"}
+    >
       <AppProvider>
         <SocketProvider>
           <App />
