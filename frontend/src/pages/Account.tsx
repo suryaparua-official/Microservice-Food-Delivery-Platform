@@ -37,9 +37,11 @@ const Account = () => {
 
   const logoutHandler = () => {
     localStorage.removeItem("token");
-    setUser(null);
-    setIsAuth(false);
-    navigate("/");
+    navigate("/", { replace: true });
+    setTimeout(() => {
+      setUser(null);
+      setIsAuth(false);
+    }, 0);
     toast.success("Logged out successfully");
   };
 

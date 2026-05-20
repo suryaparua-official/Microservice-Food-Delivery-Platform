@@ -6,7 +6,7 @@ import { BiMapPin, BiSearch } from "react-icons/bi";
 import { useLoginModal } from "../context/LoginModalContext";
 
 const Navbar = () => {
-  const { isAuth, city, quauntity } = useAppData();
+  const { isAuth, city, quauntity, user } = useAppData();
   const { openLoginModal } = useLoginModal();
   const currLocation = useLocation();
   const isHomePage = currLocation.pathname === "/";
@@ -14,6 +14,7 @@ const Navbar = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [scrolled, setScrolled] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -29,12 +30,27 @@ const Navbar = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
+  useEffect(() => {
+    setImgError(false);
+  }, [user]);
+
   const handleCartClick = (e: React.MouseEvent) => {
     if (!isAuth) {
       e.preventDefault();
       openLoginModal();
     }
   };
+
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "U";
+
+  const showImage = isAuth && user?.image && !imgError;
 
   return (
     <header
@@ -94,7 +110,6 @@ const Navbar = () => {
               transition: "border 0.2s",
             }}
           >
-            {/* Location chip */}
             <div
               style={{
                 display: "flex",
@@ -121,7 +136,6 @@ const Navbar = () => {
               </span>
             </div>
 
-            {/* Search input */}
             <div
               style={{
                 display: "flex",
@@ -160,7 +174,45 @@ const Navbar = () => {
             flexShrink: 0,
           }}
         >
-          {/* Cart — সবসময় দেখাবে, login না থাকলে click করলে modal */}
+          {/* Become a Partner — only when not logged in */}
+          {!isAuth && (
+            <Link
+              to="/partner"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                padding: "8px 14px",
+                borderRadius: 10,
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: "#888",
+                textDecoration: "none",
+                fontSize: 12,
+                fontWeight: 500,
+                transition: "all 0.2s",
+                whiteSpace: "nowrap",
+                height: 40,
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.color = "#f0f0f0";
+                (e.currentTarget as HTMLAnchorElement).style.borderColor =
+                  "rgba(255,255,255,0.18)";
+                (e.currentTarget as HTMLAnchorElement).style.background =
+                  "rgba(255,255,255,0.04)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.color = "#888";
+                (e.currentTarget as HTMLAnchorElement).style.borderColor =
+                  "rgba(255,255,255,0.08)";
+                (e.currentTarget as HTMLAnchorElement).style.background =
+                  "transparent";
+              }}
+            >
+              Become a Partner ↗
+            </Link>
+          )}
+
+          {/* Cart */}
           <Link
             to="/cart"
             onClick={handleCartClick}
@@ -224,7 +276,7 @@ const Navbar = () => {
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                padding: "8px 16px",
+                padding: "4px 12px 4px 4px",
                 borderRadius: 10,
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.08)",
@@ -233,6 +285,7 @@ const Navbar = () => {
                 fontSize: 13,
                 fontWeight: 500,
                 transition: "all 0.2s",
+                height: 40,
               }}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLAnchorElement).style.background =
@@ -247,7 +300,53 @@ const Navbar = () => {
                   "rgba(255,255,255,0.08)";
               }}
             >
-              Account
+              {/* Avatar — photo থাকলে photo, না থাকলে initials */}
+              {showImage ? (
+                <img
+                  src={user!.image}
+                  alt={user!.name}
+                  onError={() => setImgError(true)}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    border: "1.5px solid rgba(255,77,28,0.5)",
+                    flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg, #FF4D1C, #ff8c6b)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#fff",
+                    flexShrink: 0,
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  {initials}
+                </div>
+              )}
+
+              {/* First name */}
+              <span
+                style={{
+                  maxWidth: 80,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {user?.name?.split(" ")[0] ?? "Account"}
+              </span>
             </Link>
           ) : (
             <button

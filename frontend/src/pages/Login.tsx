@@ -20,12 +20,27 @@ const Login = () => {
         code: authResult["code"],
       });
       localStorage.setItem("token", result.data.token);
-      toast.success(result.data.message);
-      setUser(result.data.user);
+
+      const user = result.data.user;
+
+      // role না থাকলে customer করে দাও automatically
+      if (!user.role) {
+        const roleRes = await axios.put(
+          `${authService}/api/auth/add/role`,
+          { role: "customer" },
+          { headers: { Authorization: `Bearer ${result.data.token}` } },
+        );
+        localStorage.setItem("token", roleRes.data.token);
+        setUser(roleRes.data.user);
+      } else {
+        setUser(user);
+      }
+
       setIsAuth(true);
+      toast.success("Welcome back!");
       navigate("/");
     } catch (error) {
-      toast.error("Problem while login");
+      toast.error("Sign in failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -50,7 +65,6 @@ const Login = () => {
         overflow: "hidden",
       }}
     >
-      {/* Background glow blobs */}
       <div
         style={{
           position: "absolute",
@@ -78,7 +92,6 @@ const Login = () => {
         }}
       />
 
-      {/* Card */}
       <div
         className="fade-up"
         style={{
@@ -92,7 +105,6 @@ const Login = () => {
           zIndex: 1,
         }}
       >
-        {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div
             style={{
@@ -114,7 +126,6 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Divider */}
         <div
           style={{
             height: 1,
@@ -140,7 +151,6 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Google Button */}
         <button
           onClick={googleClientId ? googleLogin : undefined}
           disabled={loading || !googleClientId}
@@ -196,36 +206,33 @@ const Login = () => {
           )}
         </button>
 
-        {!googleClientId && (
-          <div
-            style={{
-              marginTop: 16,
-              padding: "12px 16px",
-              borderRadius: 10,
-              background: "rgba(239,68,68,0.08)",
-              border: "1px solid rgba(239,68,68,0.2)",
-            }}
-          >
-            <p style={{ fontSize: 12, color: "#f87171", lineHeight: 1.6 }}>
-              Google OAuth not configured. Set{" "}
-              <code
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  padding: "1px 5px",
-                  borderRadius: 4,
-                }}
-              >
-                VITE_GOOGLE_CLIENT_ID
-              </code>{" "}
-              in your .env file.
-            </p>
-          </div>
-        )}
+        {/* Partner link */}
+        <div
+          style={{
+            marginTop: 24,
+            textAlign: "center",
+            paddingTop: 20,
+            borderTop: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <p style={{ fontSize: 12, color: "#444" }}>
+            Restaurant owner or delivery partner?{" "}
+            <a
+              href="/partner"
+              style={{
+                color: "#FF4D1C",
+                textDecoration: "none",
+                fontWeight: 600,
+              }}
+            >
+              Join as Partner →
+            </a>
+          </p>
+        </div>
 
-        {/* Footer */}
         <p
           style={{
-            marginTop: 28,
+            marginTop: 20,
             textAlign: "center",
             fontSize: 11,
             color: "#444",

@@ -15,13 +15,13 @@ declare module "leaflet" {
 }
 
 const riderIcon = new L.DivIcon({
-  html: "🛵",
+  html: `<div style="font-size:24px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))">🛵</div>`,
   iconSize: [30, 30],
   className: "",
 });
 
 const deliveryIcon = new L.DivIcon({
-  html: "📦",
+  html: `<div style="font-size:24px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))">📦</div>`,
   iconSize: [30, 30],
   className: "",
 });
@@ -38,13 +38,10 @@ const Routing = ({
   to: [number, number];
 }) => {
   const map = useMap();
-
   useEffect(() => {
     const control = L.Routing.control({
       waypoints: [L.latLng(from), L.latLng(to)],
-      lineOptions: {
-        styles: [{ color: "#E23744", weight: 5 }],
-      },
+      lineOptions: { styles: [{ color: "#FF4D1C", weight: 4, opacity: 0.8 }] },
       addWaypoints: false,
       draggableWaypoints: false,
       show: false,
@@ -53,18 +50,16 @@ const Routing = ({
         serviceUrl: "https://router.project-osrm.org/route/v1",
       }),
     }).addTo(map);
-
     return () => {
       map.removeControl(control);
     };
   }, [from, to, map]);
-
   return null;
 };
 
 const RiderOrderMap = ({ order }: Props) => {
   const [riderLocation, setRiderLocation] = useState<[number, number] | null>(
-    null
+    null,
   );
 
   if (
@@ -83,11 +78,8 @@ const RiderOrderMap = ({ order }: Props) => {
     const fetchLocation = () => {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const latitude = pos.coords.latitude;
-          const longitude = pos.coords.longitude;
-
+          const { latitude, longitude } = pos.coords;
           setRiderLocation([latitude, longitude]);
-
           axios.post(
             `${realtimeService}/api/v1/internal/emit`,
             {
@@ -99,31 +91,74 @@ const RiderOrderMap = ({ order }: Props) => {
               headers: {
                 "x-internal-key": import.meta.env.VITE_INTERNAL_SERVICE_KEY,
               },
-            }
+            },
           );
         },
         (err) => console.log("Location Error:", err),
-        {
-          enableHighAccuracy: true,
-          maximumAge: 5000,
-          timeout: 10000,
-        }
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 },
       );
     };
-
     fetchLocation();
     const interval = setInterval(fetchLocation, 10000);
-
     return () => clearInterval(interval);
   }, [order.userId]);
 
-  if (!riderLocation) return null;
+  if (!riderLocation) {
+    return (
+      <div
+        style={{
+          background: "#161616",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: 20,
+          padding: "32px 20px",
+          textAlign: "center",
+        }}
+      >
+        <div
+          className="spin"
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: "50%",
+            border: "2px solid rgba(255,77,28,0.2)",
+            borderTopColor: "#FF4D1C",
+            margin: "0 auto 12px",
+          }}
+        />
+        <p style={{ fontSize: 13, color: "#555" }}>Getting your location...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-xl bg-white shadow-sm p-3">
+    <div
+      style={{
+        background: "#161616",
+        border: "1px solid rgba(255,255,255,0.07)",
+        borderRadius: 20,
+        overflow: "hidden",
+      }}
+    >
+      {/* Map header */}
+      <div
+        style={{
+          padding: "14px 18px",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        <div className="pulse-dot" />
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#f0f0f0" }}>
+          Live Navigation
+        </span>
+      </div>
+
       <MapContainer
         center={riderLocation}
         zoom={14}
-        className="h-87.5 w-full rounded-lg"
+        style={{ height: 300, width: "100%" }}
       >
         <TileLayer
           attribution="&copy; OpenStreetMap"

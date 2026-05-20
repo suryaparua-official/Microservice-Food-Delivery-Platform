@@ -3,7 +3,6 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/protectedRote";
 import PublicRoute from "./components/publicRoute";
-import SelectRole from "./pages/SelectRole";
 import Navbar from "./components/navbar";
 import Account from "./pages/Account";
 import { useAppData } from "./context/AppContext";
@@ -19,6 +18,7 @@ import OrderPage from "./pages/OrderPage";
 import RiderDashboard from "./pages/RiderDashboard";
 import Admin from "./pages/Admin";
 import LoginModal from "./components/LoginModal";
+import Partner from "./pages/Partner";
 
 const App = () => {
   const { user, loading } = useAppData();
@@ -57,14 +57,15 @@ const App = () => {
 
   return (
     <BrowserRouter>
-      {/* LoginModal globally available */}
       <LoginModal />
-
       <Routes>
-        {/* Login page — NO navbar, fullscreen */}
+        {/* Fullscreen pages — NO navbar */}
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<Login />} />
         </Route>
+
+        {/* Partner page — fullscreen, no navbar */}
+        <Route path="/partner" element={<Partner />} />
 
         {/* All other pages — WITH navbar */}
         <Route
@@ -79,7 +80,6 @@ const App = () => {
 
                 {/* Protected */}
                 <Route element={<ProtectedRoute />}>
-                  <Route path="/select-role" element={<SelectRole />} />
                   <Route path="/account" element={<Account />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/address" element={<AddAddressPage />} />

@@ -6,13 +6,20 @@ import axios from "axios";
 import { authService } from "../main";
 import { useAppData } from "../context/AppContext";
 import toast from "react-hot-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const LoginModal = () => {
   const { showLoginModal, closeLoginModal } = useLoginModal();
-  const { setUser, setIsAuth } = useAppData();
+  const { setUser, setIsAuth, isAuth } = useAppData();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+
+  // isAuth হলে modal বন্ধ করো — logout/login উভয় ক্ষেত্রে
+  useEffect(() => {
+    if (isAuth && showLoginModal) {
+      closeLoginModal();
+    }
+  }, [isAuth]);
 
   const responseGoogle = async (authResult: any) => {
     setLoading(true);
@@ -38,7 +45,8 @@ const LoginModal = () => {
     flow: "auth-code",
   });
 
-  if (!showLoginModal) return null;
+  // isAuth থাকলে বা modal বন্ধ থাকলে কিছু render করো না
+  if (!showLoginModal || isAuth) return null;
 
   return (
     <>
