@@ -41,49 +41,29 @@ export interface IOrder extends Document {
     | "delivered"
     | "cancelled";
 
-  paymentMethod: "razorpay" | "stripe";
-  paymentStatus: "pending" | "paid" | "failed";
+  paymentMethod: "razorpay" | "stripe" | "cod";
+  paymentStatus: "pending" | "paid" | "failed" | "cod_pending";
 
-  expiresAt: Date;
+  expiresAt?: Date;
 
   createdAt: Date;
   updatedAt: Date;
 }
 
+// COD Rules
+export const COD_MIN_AMOUNT = 199;
+export const COD_MAX_AMOUNT = 1499;
+
 const OrderSchema = new Schema<IOrder>(
   {
-    userId: {
-      type: String,
-      required: true,
-    },
-    restaurantId: {
-      type: String,
-      required: true,
-    },
-    restaurantName: {
-      type: String,
-      required: true,
-    },
-    riderId: {
-      type: String,
-      default: null,
-    },
-    riderName: {
-      type: String,
-      default: null,
-    },
-    riderPhone: {
-      type: Number,
-      default: null,
-    },
-    riderAmount: {
-      type: Number,
-      required: true,
-    },
-    distance: {
-      type: Number,
-      required: true,
-    },
+    userId: { type: String, required: true },
+    restaurantId: { type: String, required: true },
+    restaurantName: { type: String, required: true },
+    riderId: { type: String, default: null },
+    riderName: { type: String, default: null },
+    riderPhone: { type: Number, default: null },
+    riderAmount: { type: Number, required: true },
+    distance: { type: Number, required: true },
 
     items: [
       {
@@ -99,10 +79,7 @@ const OrderSchema = new Schema<IOrder>(
     platfromFee: Number,
     totalAmount: Number,
 
-    addressId: {
-      type: String,
-      required: true,
-    },
+    addressId: { type: String, required: true },
 
     deliveryAddress: {
       fromattedAddress: { type: String, required: true },
@@ -128,13 +105,13 @@ const OrderSchema = new Schema<IOrder>(
 
     paymentMethod: {
       type: String,
-      enum: ["razorpay", "stripe"],
+      enum: ["razorpay", "stripe", "cod"],
       required: true,
     },
 
     paymentStatus: {
       type: String,
-      enum: ["pending", "paid", "failed"],
+      enum: ["pending", "paid", "failed", "cod_pending"],
       default: "pending",
     },
 
@@ -143,9 +120,7 @@ const OrderSchema = new Schema<IOrder>(
       index: { expireAfterSeconds: 0 },
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true },
 );
 
 export default mongoose.model<IOrder>("Order", OrderSchema);

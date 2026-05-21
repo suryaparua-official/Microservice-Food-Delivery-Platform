@@ -9,6 +9,7 @@ import orderRoutes from "./routes/order.js";
 import cors from "cors";
 import { connectRabbitMQ } from "./config/rabbitmq.js";
 import { startPaymentConsumer } from "./config/payment.consumer.js";
+import { connectRedis } from "./config/redis.js";
 
 dotenv.config();
 
@@ -45,4 +46,5 @@ app.get("/health", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Restaurant service is running on port ${PORT}`);
   connectDB();
+  connectRedis();
 });

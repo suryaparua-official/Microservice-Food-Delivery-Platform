@@ -19,7 +19,8 @@
     "express": "^5.2.1",
     "googleapis": "^170.1.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.1.5"
+    "mongoose": "^9.1.5",
+    "redis": "^5.12.1"
   },
   "devDependencies": {
     "@types/axios": "^0.14.4",

@@ -1,5 +1,5 @@
 services:
-  # MongoDB — local database (use MongoDB Atlas in production)
+  # MongoDB
   mongodb:
     image: mongo:7
     container_name: tomato-mongodb
@@ -15,13 +15,30 @@ services:
       timeout: 5s
       retries: 5
 
-  # RabbitMQ — message queue (use CloudAMQP in production)
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: tomato-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - tomato-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  # RabbitMQ
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     container_name: tomato-rabbitmq
     ports:
-      - "5672:5672" # AMQP protocol
-      - "15672:15672" # Management UI → http://localhost:15672 (guest/guest)
+      - "5672:5672"
+      - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
@@ -32,10 +49,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-
-  # ╔═══════════════════════════════════════════
-  # ║ BACKEND SERVICES
-  # ╚═══════════════════════════════════════════
 
   auth:
     build:
@@ -54,8 +67,11 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - INTERNAL_SERVICE_KEY=${INTERNAL_SERVICE_KEY}
+      - REDIS_URL=redis://redis:6379
     depends_on:
       mongodb:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - tomato-network
@@ -83,10 +99,13 @@ services:
       - PAYMENT_QUEUE=${PAYMENT_QUEUE}
       - RIDER_QUEUE=${RIDER_QUEUE}
       - ORDER_READY_QUEUE=${ORDER_READY_QUEUE}
+      - REDIS_URL=redis://redis:6379
     depends_on:
       mongodb:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - tomato-network
@@ -115,8 +134,13 @@ services:
       - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - PAYMENT_QUEUE=${PAYMENT_QUEUE}
+      - REDIS_URL=redis://redis:6379
+      - GMAIL_USER=${GMAIL_USER}
+      - GMAIL_PASS=${GMAIL_PASS}
     depends_on:
       rabbitmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - tomato-network
@@ -136,6 +160,10 @@ services:
       - NODE_ENV=development
       - JWT_SEC=${JWT_SEC}
       - INTERNAL_SERVICE_KEY=${INTERNAL_SERVICE_KEY}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
     networks:
       - tomato-network
     restart: unless-stopped
@@ -161,10 +189,13 @@ services:
       - UTILS_SERVICE=http://utils:5002
       - RIDER_QUEUE=${RIDER_QUEUE}
       - ORDER_READY_QUEUE=${ORDER_READY_QUEUE}
+      - REDIS_URL=redis://redis:6379
     depends_on:
       mongodb:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - tomato-network
@@ -186,16 +217,15 @@ services:
       - DB_NAME=Zomato_Clone
       - JWT_SEC=${JWT_SEC}
       - INTERNAL_SERVICE_KEY=${INTERNAL_SERVICE_KEY}
+      - REDIS_URL=redis://redis:6379
     depends_on:
       mongodb:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - tomato-network
     restart: unless-stopped
-
-  # ╔═══════════════════════════════════════════
-  # ║ FRONTEND
-  # ╚═══════════════════════════════════════════
 
   frontend:
     build:
@@ -234,10 +264,6 @@ services:
       - tomato-network
     restart: unless-stopped
 
-# ╔═══════════════════════════════════════════
-# ║ NETWORKS & VOLUMES
-# ╚═══════════════════════════════════════════
-
 networks:
   tomato-network:
     driver: bridge
@@ -248,3 +274,5 @@ volumes:
     name: tomato-mongo-data
   rabbitmq_data:
     name: tomato-rabbitmq-data
+  redis_data:
+    name: tomato-redis-data

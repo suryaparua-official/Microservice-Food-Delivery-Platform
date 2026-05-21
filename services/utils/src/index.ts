@@ -5,10 +5,12 @@ import cors from "cors";
 import uploadRoutes from "./routes/cloudinary.js";
 import paymentRoutes from "./routes/payment.js";
 import { connectRabbitMQ } from "./config/rabbitmq.js";
+import { connectRedis } from "./config/redis.js";
 
 dotenv.config();
 
 await connectRabbitMQ();
+await connectRedis();
 
 const app = express();
 

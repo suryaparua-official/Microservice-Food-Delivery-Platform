@@ -5,6 +5,7 @@ import cors from "cors";
 import riderRoutes from "./routes/rider.js";
 import { connectRabbitMQ } from "./config/rabbitmq.js";
 import { startOrderReadyConsumer } from "./config/orderReady.consumer.js";
+import { connectRedis } from "./config/redis.js";
 
 dotenv.config();
 
@@ -33,4 +34,5 @@ app.get("/health", (req, res) => {
 app.listen(process.env.PORT, () => {
   console.log(`Rider service is running on port ${process.env.PORT}`);
   connectDB();
+  connectRedis();
 });

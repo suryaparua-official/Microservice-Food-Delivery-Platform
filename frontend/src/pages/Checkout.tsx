@@ -8,6 +8,9 @@ import toast from "react-hot-toast";
 import { loadStripe } from "@stripe/stripe-js";
 import { BiMapPin } from "react-icons/bi";
 
+const COD_MIN = 199;
+const COD_MAX = 1499;
+
 interface Address {
   _id: string;
   formattedAddress: string;
@@ -15,7 +18,7 @@ interface Address {
 }
 
 const Checkout = () => {
-  const { cart, subTotal, quauntity } = useAppData();
+  const { cart, subTotal, quauntity, fetchCart } = useAppData();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     null,
@@ -23,6 +26,7 @@ const Checkout = () => {
   const [loadingAddress, setLoadingAddress] = useState(true);
   const [loadingRazorpay, setLoadingRazorpay] = useState(false);
   const [loadingStripe, setLoadingStripe] = useState(false);
+  const [loadingCod, setLoadingCod] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState(false);
   const navigate = useNavigate();
 
@@ -71,7 +75,15 @@ const Checkout = () => {
   const platformFee = 7;
   const grandTotal = subTotal + deliveryFee + platformFee;
 
-  const createOrder = async (paymentMethod: "razorpay" | "stripe") => {
+  const codEligible = grandTotal >= COD_MIN && grandTotal <= COD_MAX;
+  const codMessage =
+    grandTotal < COD_MIN
+      ? `COD not available — minimum ₹${COD_MIN} (add ₹${COD_MIN - grandTotal} more)`
+      : grandTotal > COD_MAX
+        ? `COD not available — maximum ₹${COD_MAX} (use online payment)`
+        : `COD available · Pay cash on delivery`;
+
+  const createOrder = async (paymentMethod: "razorpay" | "stripe" | "cod") => {
     if (!selectedAddressId) return null;
     setCreatingOrder(true);
     try {
@@ -83,8 +95,8 @@ const Checkout = () => {
         },
       );
       return data;
-    } catch {
-      toast.error("Failed to create order");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to create order");
       return null;
     } finally {
       setCreatingOrder(false);
@@ -155,7 +167,23 @@ const Checkout = () => {
     }
   };
 
-  const anyLoading = loadingRazorpay || loadingStripe || creatingOrder;
+  const payWithCod = async () => {
+    try {
+      setLoadingCod(true);
+      const order = await createOrder("cod");
+      if (!order) return;
+      await fetchCart();
+      toast.success("Order placed! Pay cash on delivery 💵");
+      navigate("/orders");
+    } catch {
+      toast.error("Failed to place COD order");
+    } finally {
+      setLoadingCod(false);
+    }
+  };
+
+  const anyLoading =
+    loadingRazorpay || loadingStripe || loadingCod || creatingOrder;
 
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 20px 60px" }}>
@@ -325,7 +353,7 @@ const Checkout = () => {
             )}
           </Section>
 
-          {/* Order Items */}
+          {/* Order Summary */}
           <Section title="Order Summary">
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {cart.map((cartItem: ICart) => {
@@ -376,9 +404,10 @@ const Checkout = () => {
             </div>
           </Section>
 
-          {/* Payment */}
+          {/* Payment Method */}
           <Section title="Payment Method">
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {/* Online payments */}
               <PayBtn
                 label="Pay with Razorpay"
                 sublabel="UPI · Cards · Netbanking · Wallets"
@@ -397,6 +426,86 @@ const Checkout = () => {
                 disabled={!selectedAddressId || anyLoading}
                 onClick={payWithStripe}
               />
+
+              {/* Divider */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  margin: "4px 0",
+                }}
+              >
+                <div
+                  style={{
+                    flex: 1,
+                    height: 1,
+                    background: "rgba(255,255,255,0.07)",
+                  }}
+                />
+                <span style={{ fontSize: 11, color: "#444", fontWeight: 500 }}>
+                  OR
+                </span>
+                <div
+                  style={{
+                    flex: 1,
+                    height: 1,
+                    background: "rgba(255,255,255,0.07)",
+                  }}
+                />
+              </div>
+
+              {/* COD eligibility info */}
+              <div
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  background: codEligible
+                    ? "rgba(34,197,94,0.07)"
+                    : "rgba(239,68,68,0.07)",
+                  border: `1px solid ${codEligible ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: codEligible ? "#4ade80" : "#f87171",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {codEligible ? "✓" : "⚠️"} {codMessage}
+                  {!codEligible && grandTotal < COD_MIN && (
+                    <span
+                      style={{
+                        display: "block",
+                        marginTop: 2,
+                        fontSize: 11,
+                        color: "#555",
+                      }}
+                    >
+                      COD eligible range: ₹{COD_MIN} – ₹{COD_MAX}
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              {/* COD button */}
+              <PayBtn
+                label="Cash on Delivery"
+                sublabel={
+                  grandTotal < COD_MIN
+                    ? `Min ₹${COD_MIN} required — add ₹${COD_MIN - grandTotal} more`
+                    : grandTotal > COD_MAX
+                      ? `Max ₹${COD_MAX} — please use online payment`
+                      : "Pay cash when your order arrives"
+                }
+                emoji="💵"
+                color="#22c55e"
+                loading={loadingCod}
+                disabled={!selectedAddressId || anyLoading || !codEligible}
+                onClick={payWithCod}
+              />
+
               {!selectedAddressId && (
                 <p
                   style={{
@@ -473,6 +582,30 @@ const Checkout = () => {
               <span style={{ fontSize: 20, fontWeight: 800, color: "#FF4D1C" }}>
                 ₹{grandTotal}
               </span>
+            </div>
+
+            {/* COD badge in bill */}
+            <div
+              style={{
+                padding: "8px 12px",
+                borderRadius: 10,
+                background: codEligible
+                  ? "rgba(34,197,94,0.07)"
+                  : "rgba(255,255,255,0.03)",
+                border: `1px solid ${codEligible ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)"}`,
+              }}
+            >
+              <p
+                style={{
+                  fontSize: 11,
+                  color: codEligible ? "#4ade80" : "#444",
+                }}
+              >
+                💵 COD{" "}
+                {codEligible
+                  ? `available (₹${COD_MIN}–₹${COD_MAX})`
+                  : `not available for this order`}
+              </p>
             </div>
           </div>
         </div>
