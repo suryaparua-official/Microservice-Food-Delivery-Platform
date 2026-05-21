@@ -19,6 +19,7 @@ import RiderDashboard from "./pages/RiderDashboard";
 import Admin from "./pages/Admin";
 import LoginModal from "./components/LoginModal";
 import Partner from "./pages/Partner";
+import AdminLogin from "./pages/AdminLogin";
 
 const App = () => {
   const { user, loading } = useAppData();
@@ -59,26 +60,26 @@ const App = () => {
     <BrowserRouter>
       <LoginModal />
       <Routes>
-        {/* Fullscreen pages — NO navbar */}
+        {/* ── Fullscreen pages — NO navbar, NO modal ── */}
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<Login />} />
         </Route>
 
-        {/* Partner page — fullscreen, no navbar */}
+        {/* Partner portal — fullscreen */}
         <Route path="/partner" element={<Partner />} />
 
-        {/* All other pages — WITH navbar */}
+        {/* Admin login — fullscreen, hidden portal */}
+        <Route path="/admin-login" element={<AdminLogin />} />
+
+        {/* ── All other pages — WITH navbar ── */}
         <Route
           path="/*"
           element={
             <>
               <Navbar />
               <Routes>
-                {/* Public */}
                 <Route path="/" element={<Home />} />
                 <Route path="/restaurant/:id" element={<RestaurantPage />} />
-
-                {/* Protected */}
                 <Route element={<ProtectedRoute />}>
                   <Route path="/account" element={<Account />} />
                   <Route path="/cart" element={<Cart />} />
