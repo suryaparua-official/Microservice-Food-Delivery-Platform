@@ -8,29 +8,64 @@ import { useAppData } from "../context/AppContext";
 import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 
+const BLOCKED_ROLES = ["seller", "rider", "admin"];
+
+const ROLE_MESSAGE: Record<string, string> = {
+  seller:
+    "This is a Restaurant Partner account. Please use the Partner portal.",
+  rider: "This is a Delivery Partner account. Please use the Partner portal.",
+  admin: "This is an Admin account. It cannot be used as a customer account.",
+};
+
 const LoginModal = () => {
   const { showLoginModal, closeLoginModal } = useLoginModal();
   const { setUser, setIsAuth, isAuth } = useAppData();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [blockedRole, setBlockedRole] = useState<string | null>(null);
 
-  // isAuth হলে modal বন্ধ করো — logout/login উভয় ক্ষেত্রে
   useEffect(() => {
-    if (isAuth && showLoginModal) {
-      closeLoginModal();
-    }
+    if (isAuth && showLoginModal) closeLoginModal();
   }, [isAuth]);
+
+  useEffect(() => {
+    if (!showLoginModal) setBlockedRole(null);
+  }, [showLoginModal]);
 
   const responseGoogle = async (authResult: any) => {
     setLoading(true);
+    setBlockedRole(null);
     try {
       const result = await axios.post(`${authService}/api/auth/login`, {
         code: authResult["code"],
       });
-      localStorage.setItem("token", result.data.token);
-      toast.success("Signed in successfully");
-      setUser(result.data.user);
+      const token = result.data.token;
+      const user = result.data.user;
+      localStorage.setItem("token", token);
+
+      // Seller / Rider / Admin — block করো
+      if (user.role && BLOCKED_ROLES.includes(user.role)) {
+        setBlockedRole(user.role);
+        localStorage.removeItem("token");
+        setLoading(false);
+        return;
+      }
+
+      // Customer বা no role
+      if (!user.role) {
+        const roleRes = await axios.put(
+          `${authService}/api/auth/add/role`,
+          { role: "customer" },
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        localStorage.setItem("token", roleRes.data.token);
+        setUser(roleRes.data.user);
+      } else {
+        setUser(user);
+      }
+
       setIsAuth(true);
+      toast.success("Signed in successfully");
       closeLoginModal();
     } catch {
       toast.error("Sign in failed. Please try again.");
@@ -45,14 +80,16 @@ const LoginModal = () => {
     flow: "auth-code",
   });
 
-  // isAuth থাকলে বা modal বন্ধ থাকলে কিছু render করো না
   if (!showLoginModal || isAuth) return null;
 
   return (
     <>
       {/* Backdrop */}
       <div
-        onClick={closeLoginModal}
+        onClick={() => {
+          closeLoginModal();
+          setBlockedRole(null);
+        }}
         style={{
           position: "fixed",
           inset: 0,
@@ -60,7 +97,6 @@ const LoginModal = () => {
           backdropFilter: "blur(6px)",
           WebkitBackdropFilter: "blur(6px)",
           zIndex: 999,
-          animation: "fadeIn 0.2s ease",
         }}
       />
 
@@ -87,9 +123,12 @@ const LoginModal = () => {
             position: "relative",
           }}
         >
-          {/* Close button */}
+          {/* Close */}
           <button
-            onClick={closeLoginModal}
+            onClick={() => {
+              closeLoginModal();
+              setBlockedRole(null);
+            }}
             style={{
               position: "absolute",
               top: 16,
@@ -106,8 +145,8 @@ const LoginModal = () => {
               justifyContent: "center",
               cursor: "pointer",
               fontFamily: "Inter, sans-serif",
-              transition: "all 0.2s",
               lineHeight: 1,
+              transition: "all 0.2s",
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLButtonElement).style.color = "#f0f0f0";
@@ -124,7 +163,7 @@ const LoginModal = () => {
           </button>
 
           {/* Logo */}
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 20 }}>
             <div
               style={{
                 fontSize: 28,
@@ -139,29 +178,92 @@ const LoginModal = () => {
                 .
               </span>
             </div>
-            <h2
-              style={{
-                fontSize: 19,
-                fontWeight: 700,
-                color: "#f0f0f0",
-                marginBottom: 6,
-              }}
-            >
-              Sign in to continue
-            </h2>
-            <p style={{ fontSize: 13, color: "#555", lineHeight: 1.6 }}>
-              Create an account or sign in to place orders, save addresses, and
-              track deliveries.
-            </p>
           </div>
 
-          {/* Divider */}
+          {/* Blocked role message */}
+          {blockedRole ? (
+            <div
+              style={{
+                padding: "16px",
+                borderRadius: 14,
+                background: "rgba(239,68,68,0.07)",
+                border: "1px solid rgba(239,68,68,0.2)",
+                marginBottom: 20,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <span style={{ fontSize: 18 }}>🚫</span>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "#f87171" }}>
+                  Wrong portal
+                </p>
+              </div>
+              <p
+                style={{
+                  fontSize: 12,
+                  color: "#888",
+                  lineHeight: 1.6,
+                  marginBottom: 14,
+                }}
+              >
+                {ROLE_MESSAGE[blockedRole]}
+              </p>
+              <a
+                href="/partner"
+                onClick={closeLoginModal}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "7px 14px",
+                  borderRadius: 9,
+                  background: "rgba(255,77,28,0.1)",
+                  border: "1px solid rgba(255,77,28,0.25)",
+                  color: "#FF4D1C",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  textDecoration: "none",
+                }}
+              >
+                Go to Partner Portal →
+              </a>
+            </div>
+          ) : (
+            <>
+              <h2
+                style={{
+                  fontSize: 19,
+                  fontWeight: 700,
+                  color: "#f0f0f0",
+                  marginBottom: 6,
+                }}
+              >
+                Sign in to continue
+              </h2>
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "#555",
+                  lineHeight: 1.6,
+                  marginBottom: 20,
+                }}
+              >
+                Order food, save addresses, and track deliveries.
+              </p>
+            </>
+          )}
+
           <div
             style={{
               height: 1,
               background:
                 "linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)",
-              marginBottom: 24,
+              marginBottom: 20,
             }}
           />
 
@@ -215,15 +317,15 @@ const LoginModal = () => {
             ) : (
               <>
                 <FcGoogle size={20} />
-                Continue with Google
+                {blockedRole ? "Try another account" : "Continue with Google"}
               </>
             )}
           </button>
 
-          {/* Go to login page */}
           <button
             onClick={() => {
               closeLoginModal();
+              setBlockedRole(null);
               navigate("/login");
             }}
             style={{
@@ -249,13 +351,6 @@ const LoginModal = () => {
           </button>
         </div>
       </div>
-
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
     </>
   );
 };

@@ -14,12 +14,13 @@ const RestaurantPage = () => {
 
   const fetchRestaurant = async () => {
     try {
+      const token = localStorage.getItem("token");
       const { data } = await axios.get(
         `${restaurantService}/api/restaurant/${id}`,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
+          ...(token && {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         },
       );
       setRestaurant(data || null);
@@ -32,12 +33,13 @@ const RestaurantPage = () => {
 
   const fetchMenuItems = async () => {
     try {
+      const token = localStorage.getItem("token");
       const { data } = await axios.get(
         `${restaurantService}/api/item/all/${id}`,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
+          ...(token && {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         },
       );
       setMenuItems(Array.isArray(data) ? data : []);

@@ -7,28 +7,61 @@ import { useGoogleLogin } from "@react-oauth/google";
 import { FcGoogle } from "react-icons/fc";
 import { useAppData } from "../context/AppContext";
 
+const BLOCKED_ROLES = ["seller", "rider", "admin"];
+
+const ROLE_MESSAGE: Record<
+  string,
+  { msg: string; link: string; label: string }
+> = {
+  seller: {
+    msg: "This is a Restaurant Partner account.",
+    link: "/partner",
+    label: "Go to Partner Portal →",
+  },
+  rider: {
+    msg: "This is a Delivery Partner account.",
+    link: "/partner",
+    label: "Go to Partner Portal →",
+  },
+  admin: {
+    msg: "This is an Admin account.",
+    link: "/partner",
+    label: "Contact Administrator",
+  },
+};
+
 const Login = () => {
   const [loading, setLoading] = useState(false);
+  const [blockedRole, setBlockedRole] = useState<string | null>(null);
   const navigate = useNavigate();
   const { setUser, setIsAuth } = useAppData();
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   const responseGoogle = async (authResult: any) => {
     setLoading(true);
+    setBlockedRole(null);
     try {
       const result = await axios.post(`${authService}/api/auth/login`, {
         code: authResult["code"],
       });
-      localStorage.setItem("token", result.data.token);
-
+      const token = result.data.token;
       const user = result.data.user;
+      localStorage.setItem("token", token);
 
-      // role না থাকলে customer করে দাও automatically
+      // Seller / Rider / Admin — block করো
+      if (user.role && BLOCKED_ROLES.includes(user.role)) {
+        setBlockedRole(user.role);
+        localStorage.removeItem("token");
+        setLoading(false);
+        return;
+      }
+
+      // Customer বা no role — customer করে দাও
       if (!user.role) {
         const roleRes = await axios.put(
           `${authService}/api/auth/add/role`,
           { role: "customer" },
-          { headers: { Authorization: `Bearer ${result.data.token}` } },
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         localStorage.setItem("token", roleRes.data.token);
         setUser(roleRes.data.user);
@@ -39,7 +72,7 @@ const Login = () => {
       setIsAuth(true);
       toast.success("Welcome back!");
       navigate("/");
-    } catch (error) {
+    } catch {
       toast.error("Sign in failed. Please try again.");
     } finally {
       setLoading(false);
@@ -105,6 +138,7 @@ const Login = () => {
           zIndex: 1,
         }}
       >
+        {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div
             style={{
@@ -135,24 +169,83 @@ const Login = () => {
           }}
         />
 
-        <div style={{ marginBottom: 24 }}>
-          <h2
+        {/* Blocked role message */}
+        {blockedRole && ROLE_MESSAGE[blockedRole] && (
+          <div
             style={{
-              fontSize: 20,
-              fontWeight: 700,
-              color: "#f0f0f0",
-              marginBottom: 6,
+              marginBottom: 24,
+              padding: "16px 18px",
+              borderRadius: 14,
+              background: "rgba(239,68,68,0.07)",
+              border: "1px solid rgba(239,68,68,0.2)",
             }}
           >
-            Welcome back
-          </h2>
-          <p style={{ fontSize: 13, color: "#666" }}>
-            Sign in to continue ordering
-          </p>
-        </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 10,
+              }}
+            >
+              <span style={{ fontSize: 20 }}>🚫</span>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#f87171" }}>
+                Wrong portal
+              </p>
+            </div>
+            <p
+              style={{
+                fontSize: 13,
+                color: "#888",
+                lineHeight: 1.6,
+                marginBottom: 14,
+              }}
+            >
+              {ROLE_MESSAGE[blockedRole].msg} You cannot sign in as a customer
+              with this account.
+            </p>
+            <a
+              href={ROLE_MESSAGE[blockedRole].link}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "8px 16px",
+                borderRadius: 10,
+                background: "rgba(255,77,28,0.1)",
+                border: "1px solid rgba(255,77,28,0.25)",
+                color: "#FF4D1C",
+                fontSize: 13,
+                fontWeight: 600,
+                textDecoration: "none",
+                transition: "all 0.2s",
+              }}
+            >
+              {ROLE_MESSAGE[blockedRole].label}
+            </a>
+          </div>
+        )}
 
+        {!blockedRole && (
+          <div style={{ marginBottom: 24 }}>
+            <h2
+              style={{
+                fontSize: 20,
+                fontWeight: 700,
+                color: "#f0f0f0",
+                marginBottom: 6,
+              }}
+            >
+              Welcome back
+            </h2>
+            <p style={{ fontSize: 13, color: "#666" }}>
+              Sign in to continue ordering
+            </p>
+          </div>
+        )}
+
+        {/* Google Button */}
         <button
-          onClick={googleClientId ? googleLogin : undefined}
+          onClick={googleClientId ? () => googleLogin() : undefined}
           disabled={loading || !googleClientId}
           style={{
             width: "100%",
@@ -201,7 +294,7 @@ const Login = () => {
           ) : (
             <>
               <FcGoogle size={20} />
-              Continue with Google
+              {blockedRole ? "Try another account" : "Continue with Google"}
             </>
           )}
         </button>

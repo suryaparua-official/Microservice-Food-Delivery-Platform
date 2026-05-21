@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppData } from "../context/AppContext";
 import toast from "react-hot-toast";
 import { BiLogOut, BiMapPin, BiPackage } from "react-icons/bi";
+import { useState } from "react";
 
 const menuItems = [
   {
@@ -25,6 +26,7 @@ const menuItems = [
 const Account = () => {
   const { user, setUser, setIsAuth } = useAppData();
   const navigate = useNavigate();
+  const [imgError, setImgError] = useState(false);
 
   if (!user) return null;
 
@@ -34,6 +36,8 @@ const Account = () => {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+
+  const hasImage = user.image && user.image.trim() !== "" && !imgError;
 
   const logoutHandler = () => {
     localStorage.removeItem("token");
@@ -90,10 +94,11 @@ const Account = () => {
           }}
         >
           {/* Avatar */}
-          {user.image ? (
+          {hasImage ? (
             <img
               src={user.image}
               alt={user.name}
+              onError={() => setImgError(true)}
               style={{
                 width: 64,
                 height: 64,
@@ -117,6 +122,7 @@ const Account = () => {
                 fontWeight: 700,
                 color: "#fff",
                 flexShrink: 0,
+                letterSpacing: "0.02em",
               }}
             >
               {initials}

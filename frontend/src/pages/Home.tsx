@@ -65,6 +65,7 @@ const Home = () => {
     if (!location?.latitude || !location?.longitude) return;
     try {
       setLoading(true);
+      const token = localStorage.getItem("token");
       const { data } = await axios.get(
         `${restaurantService}/api/restaurant/all`,
         {
@@ -73,9 +74,10 @@ const Home = () => {
             longitude: location.longitude,
             search,
           },
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
+          // token থাকলে পাঠাও, না থাকলে header ছাড়াই call করো
+          ...(token && {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         },
       );
       setRestaurants(data.restaurants ?? []);
