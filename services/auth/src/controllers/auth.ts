@@ -19,7 +19,7 @@ export const loginUser = TryCatch(async (req, res) => {
   oauth2client.setCredentials(googleRes.tokens);
 
   const userRes = await axios.get(
-    `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${googleRes.tokens.access_token}`
+    `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${googleRes.tokens.access_token}`,
   );
   const { email, name, picture } = userRes.data;
 
@@ -65,7 +65,7 @@ export const addUserRole = TryCatch(async (req: AuthenticatedRequest, res) => {
   const user = await User.findByIdAndUpdate(
     req.user._id,
     { role },
-    { new: true }
+    { new: true },
   );
 
   if (!user) {
@@ -84,4 +84,13 @@ export const addUserRole = TryCatch(async (req: AuthenticatedRequest, res) => {
 export const myProfile = TryCatch(async (req: AuthenticatedRequest, res) => {
   const user = req.user;
   res.json(user);
+});
+
+export const getUserById = TryCatch(async (req, res) => {
+  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+  const user = await User.findById(req.params.userId).select("name email");
+  if (!user) return res.status(404).json({ message: "User not found" });
+  res.json({ name: user.name, email: user.email });
 });

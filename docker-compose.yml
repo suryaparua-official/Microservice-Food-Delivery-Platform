@@ -134,6 +134,7 @@ services:
       - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - PAYMENT_QUEUE=${PAYMENT_QUEUE}
+      - EMAIL_QUEUE=email_queue
       - REDIS_URL=redis://redis:6379
       - GMAIL_USER=${GMAIL_USER}
       - GMAIL_PASS=${GMAIL_PASS}

@@ -37,6 +37,8 @@ const STATUS_CONFIG: Record<
 
 const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
   const [updating, setUpdating] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const config = STATUS_CONFIG[order.status] || STATUS_CONFIG["rider_assigned"];
 
   const updateStatus = async () => {
@@ -55,6 +57,29 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
       toast.error(error.response?.data?.message || "Update failed");
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (otp.length !== 6) {
+      toast.error("Please enter 6-digit OTP");
+      return;
+    }
+    setVerifying(true);
+    try {
+      await axios.post(
+        `${riderService}/api/rider/order/verify/${order._id}`,
+        { otp },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
+      );
+      toast.success("Order delivered successfully! 🎉");
+      onStatusUpdate();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Invalid OTP");
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -126,7 +151,6 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
 
         {/* Route */}
         <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-          {/* Pickup */}
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
             <div
               style={{
@@ -172,8 +196,6 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
               </p>
             </div>
           </div>
-
-          {/* Dropoff */}
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
             <div style={{ paddingTop: 3 }}>
               <div
@@ -213,13 +235,9 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
           </div>
         </div>
 
-        {/* Earnings row */}
+        {/* Earnings */}
         <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 10,
-          }}
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
         >
           <div
             style={{
@@ -318,14 +336,6 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
                   textDecoration: "none",
                   transition: "all 0.2s",
                 }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.background =
-                    "rgba(59,130,246,0.18)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.background =
-                    "rgba(59,130,246,0.1)";
-                }}
               >
                 <BiPhone size={16} />
               </a>
@@ -348,14 +358,6 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
                       textDecoration: "none",
                       transition: "all 0.2s",
                     }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLAnchorElement).style.background =
-                        "rgba(34,197,94,0.18)";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLAnchorElement).style.background =
-                        "rgba(34,197,94,0.1)";
-                    }}
                   >
                     <TbNavigation size={16} />
                   </a>
@@ -364,7 +366,7 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
           </div>
         )}
 
-        {/* Action button */}
+        {/* Picked up button */}
         {order.status === "rider_assigned" && (
           <button
             onClick={updateStatus}
@@ -389,15 +391,6 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
               gap: 8,
               opacity: updating ? 0.6 : 1,
             }}
-            onMouseEnter={(e) => {
-              if (!updating)
-                (e.currentTarget as HTMLButtonElement).style.background =
-                  "rgba(245,158,11,0.2)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background =
-                "rgba(245,158,11,0.12)";
-            }}
           >
             {updating ? (
               <>
@@ -419,58 +412,70 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
           </button>
         )}
 
+        {/* OTP verify — picked_up হলে */}
         {order.status === "picked_up" && (
-          <button
-            onClick={updateStatus}
-            disabled={updating}
-            style={{
-              width: "100%",
-              padding: "14px",
-              borderRadius: 12,
-              background: updating
-                ? "rgba(34,197,94,0.05)"
-                : "rgba(34,197,94,0.12)",
-              border: "1px solid rgba(34,197,94,0.3)",
-              color: "#4ade80",
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: updating ? "not-allowed" : "pointer",
-              fontFamily: "Inter, sans-serif",
-              transition: "all 0.2s",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              opacity: updating ? 0.6 : 1,
-            }}
-            onMouseEnter={(e) => {
-              if (!updating)
-                (e.currentTarget as HTMLButtonElement).style.background =
-                  "rgba(34,197,94,0.2)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background =
-                "rgba(34,197,94,0.12)";
-            }}
-          >
-            {updating ? (
-              <>
-                <div
-                  className="spin"
-                  style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: "50%",
-                    border: "2px solid rgba(34,197,94,0.2)",
-                    borderTopColor: "#4ade80",
-                  }}
-                />
-                Updating...
-              </>
-            ) : (
-              "✓  Mark as Delivered"
-            )}
-          </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <p style={{ fontSize: 13, color: "#555", textAlign: "center" }}>
+              🔐 Ask customer for OTP to confirm delivery
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                type="number"
+                placeholder="Enter 6-digit OTP"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.slice(0, 6))}
+                className="input-dark"
+                style={{
+                  flex: 1,
+                  height: 52,
+                  textAlign: "center",
+                  fontSize: 22,
+                  letterSpacing: 8,
+                  fontWeight: 700,
+                }}
+              />
+              <button
+                onClick={handleVerifyOtp}
+                disabled={verifying || otp.length !== 6}
+                style={{
+                  padding: "0 20px",
+                  borderRadius: 12,
+                  background:
+                    otp.length === 6
+                      ? "rgba(34,197,94,0.12)"
+                      : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${otp.length === 6 ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.08)"}`,
+                  color: otp.length === 6 ? "#4ade80" : "#444",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor:
+                    verifying || otp.length !== 6 ? "not-allowed" : "pointer",
+                  fontFamily: "Inter, sans-serif",
+                  transition: "all 0.2s",
+                  height: 52,
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {verifying ? (
+                  <div
+                    className="spin"
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: "50%",
+                      border: "2px solid rgba(34,197,94,0.2)",
+                      borderTopColor: "#4ade80",
+                    }}
+                  />
+                ) : (
+                  "Verify ✓"
+                )}
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

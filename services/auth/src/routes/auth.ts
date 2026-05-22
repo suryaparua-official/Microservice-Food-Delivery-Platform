@@ -1,5 +1,10 @@
 import express from "express";
-import { addUserRole, loginUser, myProfile } from "../controllers/auth.js";
+import {
+  addUserRole,
+  getUserById,
+  loginUser,
+  myProfile,
+} from "../controllers/auth.js";
 import { isAuth } from "../middlewares/isAuth.js";
 
 const router = express.Router();
@@ -7,5 +12,6 @@ const router = express.Router();
 router.post("/login", loginUser);
 router.put("/add/role", isAuth, addUserRole);
 router.get("/me", isAuth, myProfile);
+router.get("/user/:userId", getUserById);
 
 export default router;

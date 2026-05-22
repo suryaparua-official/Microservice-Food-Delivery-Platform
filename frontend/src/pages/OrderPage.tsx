@@ -27,6 +27,7 @@ const OrderPage = () => {
   const [riderLocation, setRiderLocation] = useState<[number, number] | null>(
     null,
   );
+  const [deliveryOtp, setDeliveryOtp] = useState<string | null>(null);
 
   const fetchOrder = async () => {
     try {
@@ -72,6 +73,18 @@ const OrderPage = () => {
     socket.on("rider:location", onRiderLocation);
     return () => {
       socket.off("rider:location", onRiderLocation);
+    };
+  }, [socket]);
+
+  // OTP listener
+  useEffect(() => {
+    if (!socket) return;
+    const onOtp = ({ otp }: { otp: string }) => {
+      setDeliveryOtp(otp);
+    };
+    socket.on("order:otp", onOtp);
+    return () => {
+      socket.off("order:otp", onOtp);
     };
   }, [socket]);
 
@@ -194,9 +207,7 @@ const OrderPage = () => {
           >
             Order Progress
           </h2>
-
           <div style={{ position: "relative" }}>
-            {/* Track line */}
             <div
               style={{
                 position: "absolute",
@@ -208,7 +219,6 @@ const OrderPage = () => {
                 borderRadius: 99,
               }}
             />
-            {/* Filled track */}
             <div
               style={{
                 position: "absolute",
@@ -221,8 +231,6 @@ const OrderPage = () => {
                 transition: "width 0.6s ease",
               }}
             />
-
-            {/* Steps */}
             <div
               style={{
                 display: "flex",
@@ -288,6 +296,39 @@ const OrderPage = () => {
               })}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* OTP Box — picked_up হলে দেখাবে */}
+      {order.status === "picked_up" && deliveryOtp && (
+        <div
+          style={{
+            background: "#161616",
+            border: "1px solid rgba(255,77,28,0.3)",
+            borderRadius: 20,
+            padding: 24,
+            marginBottom: 16,
+            textAlign: "center",
+          }}
+        >
+          <p style={{ fontSize: 13, color: "#555", marginBottom: 8 }}>
+            🔐 Share this OTP with your delivery partner to confirm delivery
+          </p>
+          <div
+            style={{
+              fontSize: 42,
+              fontWeight: 800,
+              letterSpacing: 14,
+              color: "#FF4D1C",
+              fontFamily: "monospace",
+              margin: "16px 0",
+            }}
+          >
+            {deliveryOtp}
+          </div>
+          <p style={{ fontSize: 11, color: "#444" }}>
+            Valid for 10 minutes · Do not share with anyone else
+          </p>
         </div>
       )}
 
@@ -408,7 +449,6 @@ const OrderPage = () => {
 
         {/* Bill + Address */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Bill */}
           <div
             style={{
               background: "#161616",
@@ -499,7 +539,6 @@ const OrderPage = () => {
             </div>
           </div>
 
-          {/* Delivery address */}
           <div
             style={{
               background: "#161616",

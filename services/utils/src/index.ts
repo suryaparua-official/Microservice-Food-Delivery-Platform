@@ -6,11 +6,13 @@ import uploadRoutes from "./routes/cloudinary.js";
 import paymentRoutes from "./routes/payment.js";
 import { connectRabbitMQ } from "./config/rabbitmq.js";
 import { connectRedis } from "./config/redis.js";
+import { startEmailConsumer } from "./config/email.consumer.js";
 
 dotenv.config();
 
 await connectRabbitMQ();
 await connectRedis();
+await startEmailConsumer();
 
 const app = express();
 
