@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: surya850/swiggy-frontend:e5fb78e8923c824f611c32ffe0b71c753113bc9d
+          image: surya850/swiggy-frontend:f5d1c4706b578134a64402276892eced4eb5a8d3
           ports:
             - containerPort: 80
           resources:
