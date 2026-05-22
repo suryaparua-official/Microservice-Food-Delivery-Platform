@@ -2,12 +2,12 @@ import axios from "axios";
 import { AuthenticatedRequest } from "../middlewares/isAuth.js";
 import TryCatch from "../middlewares/trycatch.js";
 import Address from "../models/Address.js";
-import Cart from "../models/Cart.js";
 import { IMenuItem } from "../models/MenuItems.js";
 import Order from "../models/Order.js";
 import Restaurant, { IRestaurant } from "../models/Restaurant.js";
 import { publishEvent } from "../config/order.publisher.js";
 import { COD_MIN_AMOUNT, COD_MAX_AMOUNT } from "../models/Order.js";
+import { redisClearCart, redisGetCart } from "../config/cartRedis.js";
 
 export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
   const user = req.user;
@@ -43,9 +43,8 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
     return +(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2);
   };
 
-  const cartItems = await Cart.find({ userId: user._id })
-    .populate<{ itemId: IMenuItem }>("itemId")
-    .populate<{ restaurantId: IRestaurant }>("restaurantId");
+  // ── Cart from Redis ──
+  const { cart: cartItems } = await redisGetCart(user._id.toString());
 
   if (cartItems.length === 0)
     return res.status(400).json({ message: "Cart is empty" });
@@ -55,7 +54,7 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
     return res.status(400).json({ message: "Invalid Cart Data" });
   }
 
-  const restaurantId = firstCartItem.restaurantId._id;
+  const restaurantId = (firstCartItem.restaurantId as any)._id.toString();
   const restaurant = await Restaurant.findById(restaurantId);
   if (!restaurant)
     return res.status(404).json({ message: "No restaurant with this id" });
@@ -73,7 +72,7 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
 
   let subtotal = 0;
   const orderItems = cartItems.map((cart) => {
-    const item = cart.itemId;
+    const item = cart.itemId as any;
     if (!item) throw new Error("Invalid cart item");
     subtotal += item.price * cart.quauntity;
     return {
@@ -109,7 +108,6 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
   const [longitude, latitude] = address.location.coordinates;
   const riderAmount = Math.ceil(distance) * 17;
 
-  // Fix 1 — use any type to avoid exactOptionalPropertyTypes conflict
   const orderData: any = {
     userId: user._id.toString(),
     restaurantId: restaurantId.toString(),
@@ -122,7 +120,6 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
     deliveryFee,
     platfromFee,
     totalAmount,
-    // Fix 2 — cast _id to any to avoid 'never' type error
     addressId: (address._id as any).toString(),
     deliveryAddress: {
       fromattedAddress: address.formattedAddress,
@@ -142,9 +139,9 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
 
   const order = await Order.create(orderData);
 
-  // COD — cart clear immediately
+  // COD — cart clear immediately from Redis
   if (paymentMethod === "cod") {
-    await Cart.deleteMany({ userId: user._id });
+    await redisClearCart(user._id.toString());
   }
 
   res.json({
