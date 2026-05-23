@@ -5,6 +5,8 @@ import authRoutes from "./routes/auth.js";
 import connectDB from "./config/db.js";
 import { connectRedis } from "./config/redis.js";
 import { globalLimiter, loginLimiter } from "./middlewares/rateLimiter.js";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./config/swagger.js";
 
 dotenv.config();
 
@@ -22,12 +24,11 @@ app.use(
 );
 
 app.use(express.json());
-
-// Global rate limit
 app.use(globalLimiter);
-
-// Login specific rate limit
 app.use("/api/auth/login", loginLimiter);
+
+// Swagger docs
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api/auth", authRoutes);
 
@@ -38,7 +39,8 @@ app.get("/health", (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, async () => {
-  console.log(`Auth service is running on port ${PORT}`);
+  console.log(`Auth service running on port ${PORT}`);
+  console.log(`Swagger docs: http://localhost:${PORT}/api/docs`);
   await connectDB();
   await connectRedis();
 });
