@@ -5,6 +5,7 @@ import App from "./App.tsx";
 import { AppProvider } from "./context/AppContext.tsx";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { LoginModalProvider } from "./context/LoginModalContext.tsx";
+import { SocketProvider } from "./context/SocketContext.tsx";
 
 export const authService = import.meta.env.VITE_AUTH_URL;
 export const restaurantService = import.meta.env.VITE_RESTAURANT_URL;
@@ -18,7 +19,9 @@ createRoot(document.getElementById("root")!).render(
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
       <AppProvider>
         <LoginModalProvider>
-          <App />
+          <SocketProvider>
+            <App />
+          </SocketProvider>
         </LoginModalProvider>
       </AppProvider>
     </GoogleOAuthProvider>

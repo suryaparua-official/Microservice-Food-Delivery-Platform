@@ -161,11 +161,9 @@ export const fetchMyCurrentOrder = TryCatch(
       );
       res.json({ order: data });
     } catch (error: any) {
-      res
-        .status(500)
-        .json({
-          message: error?.response?.data?.message || "Something went wrong",
-        });
+      res.status(500).json({
+        message: error?.response?.data?.message || "Something went wrong",
+      });
     }
   },
 );
@@ -188,11 +186,9 @@ export const updateOrderStatus = TryCatch(
       );
       res.json({ message: data.message });
     } catch (error: any) {
-      res
-        .status(500)
-        .json({
-          message: error?.response?.data?.message || "Something went wrong",
-        });
+      res.status(500).json({
+        message: error?.response?.data?.message || "Something went wrong",
+      });
     }
   },
 );
@@ -217,10 +213,28 @@ export const verifyOtp = TryCatch(async (req: AuthenticatedRequest, res) => {
 
     res.json({ message: data.message });
   } catch (error: any) {
-    res
-      .status(400)
-      .json({
-        message: error?.response?.data?.message || "OTP verification failed",
-      });
+    res.status(400).json({
+      message: error?.response?.data?.message || "OTP verification failed",
+    });
   }
 });
+
+export const getMyEarnings = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?._id;
+    if (!userId) return res.status(401).json({ message: "Please Login" });
+
+    const rider = await Rider.findOne({ userId, isVerified: true });
+    if (!rider) return res.status(404).json({ message: "Rider not found" });
+
+    try {
+      const { data } = await axios.get(
+        `${process.env.RESTAURANT_SERVICE}/api/order/rider/earnings/${rider._id}`,
+        { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
+      );
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to fetch earnings" });
+    }
+  },
+);

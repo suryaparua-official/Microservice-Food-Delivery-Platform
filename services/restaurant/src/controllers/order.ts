@@ -451,3 +451,119 @@ export const verifyDeliveryOtp = TryCatch(async (req, res) => {
 
   return res.json({ message: "Order delivered successfully! 🎉" });
 });
+
+export const cancelOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+  const { orderId } = req.params;
+  const order = await Order.findById(orderId);
+
+  if (!order) return res.status(404).json({ message: "Order not found" });
+
+  if (order.userId !== req.user._id.toString()) {
+    return res
+      .status(401)
+      .json({ message: "You are not allowed to cancel this order" });
+  }
+
+  // Cancel allowed statuses only
+  const cancellableStatuses = ["placed", "accepted"];
+  if (!cancellableStatuses.includes(order.status)) {
+    return res.status(400).json({
+      message: `Order cannot be cancelled at this stage (${order.status}). Please contact support.`,
+    });
+  }
+
+  order.status = "cancelled";
+
+  // Refund logic
+  if (order.paymentStatus === "paid") {
+    order.paymentStatus = "refund_pending";
+  } else if (order.paymentStatus === "cod_pending") {
+    order.paymentStatus = "failed";
+  }
+
+  await order.save();
+
+  // Notify restaurant
+  try {
+    await axios.post(
+      `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
+      {
+        event: "order:update",
+        room: `restaurant:${order.restaurantId}`,
+        payload: { orderId: order._id, status: "cancelled" },
+      },
+      { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
+    );
+  } catch (err) {
+    console.error("Failed to notify restaurant of cancellation:", err);
+  }
+
+  res.json({
+    message: "Order cancelled successfully",
+    refundMessage:
+      order.paymentMethod !== "cod" && order.paymentStatus === "refund_pending"
+        ? "Your refund will be processed in 5-7 business days."
+        : null,
+    order,
+  });
+});
+
+export const getRiderEarnings = TryCatch(async (req, res) => {
+  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
+  const { riderId } = req.params;
+  if (!riderId) return res.status(400).json({ message: "Rider id required" });
+
+  const orders = await Order.find({
+    riderId,
+    status: "delivered",
+  })
+    .select("riderAmount totalAmount createdAt restaurantName")
+    .lean();
+
+  const totalEarnings = orders.reduce(
+    (sum, o) => sum + (o.riderAmount || 0),
+    0,
+  );
+  const totalOrders = orders.length;
+
+  // Last 7 days daily breakdown
+  const last7Days: { date: string; earnings: number; orders: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split("T")[0];
+    const dayOrders = orders.filter((o) => {
+      const orderDate = new Date(o.createdAt).toISOString().split("T")[0];
+      return orderDate === dateStr;
+    });
+    last7Days.push({
+      date: dateStr,
+      earnings: dayOrders.reduce((sum, o) => sum + (o.riderAmount || 0), 0),
+      orders: dayOrders.length,
+    });
+  }
+
+  // Today's earnings
+  const today = new Date().toISOString().split("T")[0];
+  const todayOrders = orders.filter(
+    (o) => new Date(o.createdAt).toISOString().split("T")[0] === today,
+  );
+  const todayEarnings = todayOrders.reduce(
+    (sum, o) => sum + (o.riderAmount || 0),
+    0,
+  );
+
+  res.json({
+    totalEarnings,
+    totalOrders,
+    todayEarnings,
+    todayOrders: todayOrders.length,
+    last7Days,
+    recentOrders: orders.slice(0, 5),
+  });
+});

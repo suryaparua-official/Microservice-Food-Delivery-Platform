@@ -38,7 +38,6 @@ export interface IRestaurant {
   ownerId: string;
   phone: number;
   isVerified: boolean;
-
   autoLocation: {
     type: "Point";
     coordinates: [number, number];
@@ -69,6 +68,24 @@ export interface ICart {
   cretedAt: Date;
   updatedAt: Date;
 }
+
+export type PaymentStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "cod_pending"
+  | "refund_pending"
+  | "refunded";
+
+export type OrderStatus =
+  | "placed"
+  | "accepted"
+  | "preparing"
+  | "ready_for_rider"
+  | "rider_assigned"
+  | "picked_up"
+  | "delivered"
+  | "cancelled";
 
 export interface IOrder {
   _id: string;
@@ -102,21 +119,11 @@ export interface IOrder {
     longitude: number;
   };
 
-  status:
-    | "placed"
-    | "accepted"
-    | "preparing"
-    | "ready_for_rider"
-    | "rider_assigned"
-    | "picked_up"
-    | "delivered"
-    | "cancelled";
-
+  status: OrderStatus;
   paymentMethod: "razorpay" | "stripe" | "cod";
-  paymentStatus: "pending" | "paid" | "failed" | "cod_pending";
+  paymentStatus: PaymentStatus;
 
   expiresAt: Date;
-
   createdAt: Date;
   updatedAt: Date;
 }

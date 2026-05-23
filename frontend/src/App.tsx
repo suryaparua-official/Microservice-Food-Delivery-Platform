@@ -20,6 +20,7 @@ import Admin from "./pages/Admin";
 import LoginModal from "./components/LoginModal";
 import Partner from "./pages/Partner";
 import AdminLogin from "./pages/AdminLogin";
+import Footer from "./components/Footer";
 
 const App = () => {
   const { user, loading } = useAppData();
@@ -94,6 +95,7 @@ const App = () => {
                   <Route path="/ordersuccess" element={<OrderSuccess />} />
                 </Route>
               </Routes>
+              <Footer />
             </>
           }
         />

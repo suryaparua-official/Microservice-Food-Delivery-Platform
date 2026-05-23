@@ -11,6 +11,7 @@ import audio from "../assets/faaah.mp3";
 import RiderOrderRequest from "../components/RiderOrderRequest";
 import RiderCurrentOrder from "../components/RiderCurrentOrder";
 import RiderOrderMap from "../components/RiderOrderMap";
+import RiderEarnings from "../components/RiderEarnings";
 
 interface IRider {
   _id: string;
@@ -265,7 +266,6 @@ const RiderDashboard = () => {
             pointerEvents: "none",
           }}
         />
-
         <div
           className="fade-up"
           style={{
@@ -296,7 +296,6 @@ const RiderDashboard = () => {
               Fill in your details to start receiving delivery orders
             </p>
           </div>
-
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div>
               <label
@@ -321,7 +320,6 @@ const RiderDashboard = () => {
                 style={{ height: 48 }}
               />
             </div>
-
             <div>
               <label
                 style={{
@@ -345,7 +343,6 @@ const RiderDashboard = () => {
                 style={{ height: 48 }}
               />
             </div>
-
             <div>
               <label
                 style={{
@@ -369,7 +366,6 @@ const RiderDashboard = () => {
                 style={{ height: 48 }}
               />
             </div>
-
             <div>
               <label
                 style={{
@@ -445,7 +441,6 @@ const RiderDashboard = () => {
                 />
               </label>
             </div>
-
             <button
               disabled={submitting}
               onClick={handleSubmit}
@@ -479,8 +474,6 @@ const RiderDashboard = () => {
                 "Submit Profile →"
               )}
             </button>
-
-            {/* Logout on registration page too */}
             <button
               onClick={logoutHandler}
               style={{
@@ -516,7 +509,7 @@ const RiderDashboard = () => {
   // Dashboard
   return (
     <div style={{ minHeight: "100vh", background: "#0d0d0d" }}>
-      {/* Top bar — with logout */}
+      {/* Top bar */}
       <div
         style={{
           background: "rgba(22,22,22,0.95)",
@@ -642,7 +635,6 @@ const RiderDashboard = () => {
                 }}
               />
             </div>
-
             <div style={{ flex: 1 }}>
               <h2
                 style={{
@@ -778,6 +770,9 @@ const RiderDashboard = () => {
             </div>
           )}
         </div>
+
+        {/* Earnings section — verified rider হলে দেখাবে */}
+        {profile.isVerified && <RiderEarnings />}
 
         {/* Sound notification */}
         {!audioUnlocked && (
