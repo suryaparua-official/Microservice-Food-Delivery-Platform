@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: admin
-          image: surya850/swiggy-admin:f5d1c4706b578134a64402276892eced4eb5a8d3
+          image: surya850/swiggy-admin:64f3812611991e2e057ff6db9700fb18fb6032a4
           ports:
             - containerPort: 5006
           env:
