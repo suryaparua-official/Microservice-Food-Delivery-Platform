@@ -10,10 +10,13 @@ interface Props {
   onStatusUpdate?: () => void;
 }
 
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; color: string; bg: string }
-> = {
+interface StatusConfig {
+  label: string;
+  color: string;
+  bg: string;
+}
+
+const STATUS_CONFIG: { [key: string]: StatusConfig } = {
   placed: {
     label: "Order Placed",
     color: "#f59e0b",
@@ -56,7 +59,7 @@ const STATUS_CONFIG: Record<
   },
 };
 
-const ACTION_LABELS: Record<string, string> = {
+const ACTION_LABELS: { [key: string]: string } = {
   accepted: "Accept Order",
   preparing: "Start Preparing",
   ready_for_rider: "Mark Ready",
@@ -65,8 +68,8 @@ const ACTION_LABELS: Record<string, string> = {
 const OrderCard = ({ order, onStatusUpdate }: Props) => {
   const [loading, setLoading] = useState(false);
   const [retryVisible, setRetryVisible] = useState(false);
-  const actions = ORDER_ACTIONS[order.status] || [];
-  const config = STATUS_CONFIG[order.status] || {
+  const actions: string[] = ORDER_ACTIONS[order.status] || [];
+  const config: StatusConfig = STATUS_CONFIG[order.status] || {
     label: order.status,
     color: "#888",
     bg: "rgba(255,255,255,0.06)",
@@ -100,6 +103,10 @@ const OrderCard = ({ order, onStatusUpdate }: Props) => {
       setLoading(false);
     }
   };
+
+  const isCodPending = order.paymentStatus === "cod_pending";
+  const isPaid = order.paymentStatus === "paid";
+  const canAct = (isPaid || isCodPending) && actions.length > 0;
 
   return (
     <div
@@ -216,15 +223,16 @@ const OrderCard = ({ order, onStatusUpdate }: Props) => {
               fontWeight: 600,
               padding: "3px 8px",
               borderRadius: 6,
-              background:
-                order.paymentStatus === "paid"
-                  ? "rgba(34,197,94,0.1)"
+              background: isPaid
+                ? "rgba(34,197,94,0.1)"
+                : isCodPending
+                  ? "rgba(59,130,246,0.1)"
                   : "rgba(245,158,11,0.1)",
-              color: order.paymentStatus === "paid" ? "#4ade80" : "#f59e0b",
+              color: isPaid ? "#4ade80" : isCodPending ? "#60a5fa" : "#f59e0b",
               textTransform: "capitalize",
             }}
           >
-            {order.paymentStatus}
+            {isCodPending ? "COD" : order.paymentStatus}
           </span>
         </div>
         <span style={{ fontSize: 16, fontWeight: 800, color: "#FF4D1C" }}>
@@ -233,7 +241,7 @@ const OrderCard = ({ order, onStatusUpdate }: Props) => {
       </div>
 
       {/* Action buttons */}
-      {order.paymentStatus === "paid" && actions.length > 0 && (
+      {canAct && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {actions.map((status: string) => (
             <button

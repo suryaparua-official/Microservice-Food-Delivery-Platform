@@ -41,7 +41,7 @@ export interface IRestaurant {
 
   autoLocation: {
     type: "Point";
-    coordinates: [number, number]; //[longitude, latitude]
+    coordinates: [number, number];
     formattedAddress: string;
   };
   isOpen: boolean;
@@ -112,8 +112,8 @@ export interface IOrder {
     | "delivered"
     | "cancelled";
 
-  paymentMethod: "razorpay" | "stripe";
-  paymentStatus: "pending" | "paid" | "failed";
+  paymentMethod: "razorpay" | "stripe" | "cod";
+  paymentStatus: "pending" | "paid" | "failed" | "cod_pending";
 
   expiresAt: Date;
 

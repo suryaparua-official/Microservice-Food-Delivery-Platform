@@ -33,7 +33,7 @@ export const startOrderReadyConsumer = async () => {
         location: {
           $near: {
             $geometry: location,
-            $maxDistance: 500,
+            $maxDistance: 5000,
           },
         },
       });
@@ -61,7 +61,7 @@ export const startOrderReadyConsumer = async () => {
               headers: {
                 "x-internal-key": process.env.INTERNAL_SERVICE_KEY,
               },
-            }
+            },
           );
           console.log(`Notified rider ${rider.userId} successfully`);
         } catch (error) {
