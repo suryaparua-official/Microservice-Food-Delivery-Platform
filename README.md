@@ -1,4 +1,4 @@
-# Swiggy — Food Delivery Platform
+# Zestify — Food Delivery Platform
 
 A production-grade, cloud-native food delivery application built with a microservices architecture and deployed on Google Kubernetes Engine (GKE) using a full DevSecOps pipeline.
 
@@ -39,6 +39,26 @@ A complete technical report covering architecture, system design, infrastructure
 ## 🌟 Overview
 
 Zestify is a full-stack food delivery platform similar to Swiggy/Zomato. It supports three types of users:
+
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---|---|
+| **JWT Authentication** | Google OAuth 2.0 login with 15-day JWT tokens |
+| **Real-time Order Tracking** | Live updates via Socket.io WebSocket |
+| **COD & Online Payment** | Cash-on-delivery + Razorpay/Stripe integration |
+| **OTP Delivery Confirmation** | 6-digit OTP verified by rider at doorstep |
+| **Email Notifications** | Order confirmation and delivery OTP emails |
+| **Geospatial Restaurant Discovery** | MongoDB `$geoNear` — restaurants within 5 km |
+| **Circuit Breaker** | Opossum circuit breakers on all inter-service HTTP calls |
+| **Axios Retry** | Exponential backoff retry on 5xx errors (3 retries) |
+| **Rate Limiting** | Per-endpoint rate limiting via express-rate-limit |
+| **Swagger API Docs** | Interactive API documentation at `/api/docs` per service |
+| **Multi-role Support** | Customer, Restaurant Owner, Delivery Rider, Admin |
+
+---
 
 | Role                          | Capabilities                                                                                  |
 | ----------------------------- | --------------------------------------------------------------------------------------------- |
@@ -982,6 +1002,55 @@ VITE_REALTIME_URL=http://localhost:5004
 VITE_RIDER_URL=http://localhost:5005
 VITE_ADMIN_URL=http://localhost:5006
 ```
+
+---
+
+## 📖 API Documentation
+
+Each backend service exposes an interactive Swagger UI at `/api/docs`:
+
+| Service | Swagger URL |
+|---|---|
+| Auth | http://localhost:5000/api/docs |
+| Restaurant | http://localhost:5001/api/docs |
+| Utils | http://localhost:5002/api/docs |
+| Rider | http://localhost:5005/api/docs |
+
+The Swagger UI is served by `swagger-ui-express` using JSDoc annotations in each service's route files. All documented endpoints support JWT Bearer authentication via the Authorize button.
+
+---
+
+## 🧪 Testing
+
+### Backend Tests
+
+```bash
+# Auth service
+cd services/auth && npm test
+
+# Restaurant service
+cd services/restaurant && npm test
+```
+
+### Frontend Tests (Vitest)
+
+```bash
+cd frontend
+
+# Run all tests once
+npm test
+
+# Watch mode
+npm run test:watch
+
+# With coverage
+npm run test:coverage
+```
+
+Frontend test suites:
+- `orderflow.test.ts` — ORDER_ACTIONS state machine validation
+- `cod.test.ts` — COD amount boundary validation
+- `otp.test.ts` — OTP format validation
 
 ---
 

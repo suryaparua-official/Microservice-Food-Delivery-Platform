@@ -6,8 +6,12 @@ import riderRoutes from "./routes/rider.js";
 import { connectRabbitMQ } from "./config/rabbitmq.js";
 import { startOrderReadyConsumer } from "./config/orderReady.consumer.js";
 import { connectRedis } from "./config/redis.js";
+import { setupAxiosRetry } from "./config/axiosRetry.js";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./config/swagger.js";
 
 dotenv.config();
+setupAxiosRetry();
 
 await connectRabbitMQ();
 startOrderReadyConsumer();
@@ -26,6 +30,8 @@ app.use(
 );
 
 app.use("/api/rider", riderRoutes);
+
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });

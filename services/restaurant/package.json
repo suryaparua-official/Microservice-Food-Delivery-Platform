@@ -19,6 +19,7 @@
     "@types/cors": "^2.8.19",
     "amqplib": "^0.10.9",
     "axios": "^1.13.4",
+    "axios-retry": "^4.5.0",
     "cors": "^2.8.6",
     "datauri": "^4.1.0",
     "dotenv": "^17.2.3",
@@ -27,6 +28,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.1.5",
     "multer": "^2.0.2",
+    "opossum": "^9.0.0",
     "redis": "^5.12.1",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1"
@@ -39,6 +41,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mongoose": "^5.11.97",
     "@types/multer": "^2.0.0",
+    "@types/opossum": "^8.1.9",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "concurrently": "^9.2.1",

@@ -10,8 +10,12 @@ import cors from "cors";
 import { connectRabbitMQ } from "./config/rabbitmq.js";
 import { startPaymentConsumer } from "./config/payment.consumer.js";
 import { connectRedis } from "./config/redis.js";
+import { setupAxiosRetry } from "./config/axiosRetry.js";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./config/swagger.js";
 
 dotenv.config();
+setupAxiosRetry();
 
 await connectRabbitMQ();
 startPaymentConsumer();
@@ -38,6 +42,8 @@ app.use("/api/item", itemRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/address", addressRoutes);
 app.use("/api/order", orderRoutes);
+
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
