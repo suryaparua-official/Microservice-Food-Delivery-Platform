@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  userId          String
+  restaurantId    String
+  restaurantName  String
+  riderId         String?
+  riderPhone      String?
+  riderName       String?
+  distance        Float
+  riderAmount     Float
+  subtotal        Float
+  deliveryFee     Float
+  platformFee     Float
+  totalAmount     Float
+  addressId       String
+  deliveryAddress Json
+  items           Json
+  status          OrderStatus   @default(placed)
+  paymentMethod   PaymentMethod
+  paymentStatus   PaymentStatus @default(pending)
+  expiresAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Address {
+  id               String   @id @default(cuid())
+  userId           String
+  formattedAddress String
+  mobile           String
+  latitude         Float
+  longitude        Float
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+enum OrderStatus {
+  placed
+  accepted
+  preparing
+  ready_for_rider
+  rider_assigned
+  picked_up
+  delivered
+  cancelled
+}
+
+enum PaymentMethod {
+  razorpay
+  stripe
+  cod
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  cod_pending
+  refund_pending
+  refunded
+}

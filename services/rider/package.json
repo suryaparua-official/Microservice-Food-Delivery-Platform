@@ -23,6 +23,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
     "jsonwebtoken": "^9.0.3",
+    "kafkajs": "^2.2.4",
     "mongoose": "^9.1.6",
     "multer": "^2.0.2",
     "opossum": "^9.0.0",

@@ -4,15 +4,23 @@ import cloudinary from "cloudinary";
 import cors from "cors";
 import uploadRoutes from "./routes/cloudinary.js";
 import paymentRoutes from "./routes/payment.js";
+import auditRoutes from "./routes/audit.js";
 import { connectRabbitMQ } from "./config/rabbitmq.js";
 import { connectRedis } from "./config/redis.js";
 import { startEmailConsumer } from "./config/email.consumer.js";
+import { startKafkaConsumer } from "./config/kafka.consumer.js";
 
 dotenv.config();
 
 await connectRabbitMQ();
 await connectRedis();
 await startEmailConsumer();
+
+try {
+  await startKafkaConsumer();
+} catch (err) {
+  console.error("Kafka consumer connection failed (non-fatal):", err);
+}
 
 const app = express();
 
@@ -44,6 +52,7 @@ cloudinary.v2.config({
 
 app.use("/api", uploadRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/audit", auditRoutes);
 
 const PORT = process.env.PORT || 5002;
 

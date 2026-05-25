@@ -1,8 +1,8 @@
 import axios from "axios";
 import { AuthenticatedRequest } from "../middlewares/isAuth.js";
 import TryCatch from "../middlewares/trycatch.js";
-import Address from "../models/Address.js";
-import Order from "../models/Order.js";
+import { prisma } from "../config/prisma.js";
+import { OrderStatus, PaymentStatus, PaymentMethod } from "@prisma/client";
 import Restaurant from "../models/Restaurant.js";
 import { publishEvent } from "../config/order.publisher.js";
 import { COD_MIN_AMOUNT, COD_MAX_AMOUNT } from "../models/Order.js";
@@ -12,6 +12,7 @@ import {
   publishOtpEmail,
   publishOrderPlacedEmail,
 } from "../config/email.publisher.js";
+import { publishOrderEvent } from "../config/kafka.js";
 
 export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
   const user = req.user;
@@ -26,7 +27,9 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
     return res.status(400).json({ message: "Invalid payment method" });
   }
 
-  const address = await Address.findOne({ _id: addressId, userId: user._id });
+  const address = await prisma.address.findFirst({
+    where: { id: addressId, userId: user._id.toString() },
+  });
   if (!address) return res.status(404).json({ message: "Address Not found" });
 
   const getDistanceKm = (
@@ -67,8 +70,8 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
       .json({ message: "Sorry this restaurant is closed for now" });
 
   const distance = getDistanceKm(
-    address.location.coordinates[1],
-    address.location.coordinates[0],
+    address.latitude,
+    address.longitude,
     restaurant.autoLocation.coordinates[1],
     restaurant.autoLocation.coordinates[0],
   );
@@ -87,8 +90,8 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
   });
 
   const deliveryFee = subtotal < 250 ? 49 : 0;
-  const platfromFee = 7;
-  const totalAmount = subtotal + deliveryFee + platfromFee;
+  const platformFee = 7;
+  const totalAmount = subtotal + deliveryFee + platformFee;
 
   if (paymentMethod === "cod") {
     if (totalAmount < COD_MIN_AMOUNT) {
@@ -107,44 +110,50 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
     }
   }
 
-  const [longitude, latitude] = address.location.coordinates;
   const riderAmount = Math.ceil(distance) * 17;
 
-  const orderData: any = {
-    userId: user._id.toString(),
-    restaurantId: restaurantId.toString(),
-    restaurantName: restaurant.name,
-    riderId: null,
-    distance,
-    riderAmount,
-    items: orderItems,
-    subtotal,
-    deliveryFee,
-    platfromFee,
-    totalAmount,
-    addressId: (address._id as any).toString(),
-    deliveryAddress: {
-      fromattedAddress: address.formattedAddress,
-      mobile: address.mobile,
-      latitude,
-      longitude,
+  const order = await prisma.order.create({
+    data: {
+      userId: user._id.toString(),
+      restaurantId,
+      restaurantName: restaurant.name,
+      riderId: null,
+      distance,
+      riderAmount,
+      items: orderItems,
+      subtotal,
+      deliveryFee,
+      platformFee,
+      totalAmount,
+      addressId: address.id,
+      deliveryAddress: {
+        formattedAddress: address.formattedAddress,
+        mobile: address.mobile,
+        latitude: address.latitude,
+        longitude: address.longitude,
+      },
+      paymentMethod: paymentMethod as PaymentMethod,
+      paymentStatus: paymentMethod === "cod" ? PaymentStatus.cod_pending : PaymentStatus.pending,
+      status: OrderStatus.placed,
+      expiresAt: paymentMethod !== "cod" ? new Date(Date.now() + 15 * 60 * 1000) : null,
     },
-    paymentMethod,
-    paymentStatus: paymentMethod === "cod" ? "cod_pending" : "pending",
-    status: "placed",
-  };
+  });
 
-  if (paymentMethod !== "cod") {
-    orderData.expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+  try {
+    await publishOrderEvent("ORDER_PLACED", {
+      orderId: order.id,
+      userId: order.userId,
+      restaurantId: order.restaurantId,
+      paymentMethod,
+      totalAmount,
+    });
+  } catch (err) {
+    console.error("Kafka ORDER_PLACED publish failed (non-fatal):", err);
   }
 
-  const order = await Order.create(orderData);
-
-  // COD — cart clear + email
   if (paymentMethod === "cod") {
     await redisClearCart(user._id.toString());
 
-    // COD order placed email
     try {
       const { data: userData } = await axios.get(
         `${process.env.AUTH_SERVICE_URL}/api/auth/user/${user._id.toString()}`,
@@ -157,17 +166,17 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
           restaurantName: restaurant.name,
           items: orderItems,
           totalAmount,
-          orderId: order._id.toString(),
+          orderId: order.id,
         });
       }
     } catch (err) {
-      console.error("❌ Failed to publish COD order email:", err);
+      console.error("Failed to publish COD order email:", err);
     }
   }
 
   res.json({
     message: "Order created successfully",
-    orderId: order._id.toString(),
+    orderId: order.id,
     amount: totalAmount,
     paymentMethod,
     isCod: paymentMethod === "cod",
@@ -178,48 +187,50 @@ export const fetchOrderForPayment = TryCatch(async (req, res) => {
   if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
     return res.status(403).json({ message: "Forbidden" });
   }
-  const order = await Order.findById(req.params.id);
+  const order = await prisma.order.findUnique({ where: { id: req.params.id as string } });
   if (!order) return res.status(404).json({ message: "Order not found" });
-  if (order.paymentStatus !== "pending") {
+  if (order.paymentStatus !== PaymentStatus.pending) {
     return res.status(400).json({ message: "Order already paid" });
   }
-  res.json({ orderId: order._id, amount: order.totalAmount, currency: "INR" });
+  res.json({ orderId: order.id, amount: order.totalAmount, currency: "INR" });
 });
 
 export const fetchRestaurantOrders = TryCatch(
   async (req: AuthenticatedRequest, res) => {
     const user = req.user;
-    const { restaurantId } = req.params;
+    const restaurantId = req.params.restaurantId as string;
     if (!user) return res.status(401).json({ message: "Unauthorized" });
     if (!restaurantId)
       return res.status(400).json({ message: "Restaurant id is required" });
-    const limit = req.query.limit ? Number(req.query.limit) : 0;
-    const orders = await Order.find({
-      restaurantId,
-      paymentStatus: { $in: ["paid", "cod_pending"] },
-    })
-      .sort({ createdAt: -1 })
-      .limit(limit);
+    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    const orders = await prisma.order.findMany({
+      where: {
+        restaurantId,
+        paymentStatus: { in: [PaymentStatus.paid, PaymentStatus.cod_pending] },
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
     return res.json({ success: true, count: orders.length, orders });
   },
 );
 
-const ALLOWED_STATUSES = ["accepted", "preparing", "ready_for_rider"] as const;
+const ALLOWED_STATUSES: string[] = ["accepted", "preparing", "ready_for_rider"];
 
 export const updateOrderStatus = TryCatch(
   async (req: AuthenticatedRequest, res) => {
     const user = req.user;
-    const { orderId } = req.params;
+    const orderId = req.params.orderId as string;
     const { status } = req.body;
     if (!user) return res.status(401).json({ message: "Unauthorized" });
     if (!ALLOWED_STATUSES.includes(status)) {
       return res.status(400).json({ message: "Invalid order status" });
     }
-    const order = await Order.findById(orderId);
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
     if (!order) return res.status(404).json({ message: "Order not found" });
     if (
-      order.paymentStatus !== "paid" &&
-      order.paymentStatus !== "cod_pending"
+      order.paymentStatus !== PaymentStatus.paid &&
+      order.paymentStatus !== PaymentStatus.cod_pending
     ) {
       return res.status(400).json({ message: "Order payment not completed" });
     }
@@ -231,41 +242,66 @@ export const updateOrderStatus = TryCatch(
         .status(401)
         .json({ message: "You are not allowed to update this order" });
     }
-    order.status = status;
-    await order.save();
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: { status: status as OrderStatus },
+    });
     await axios.post(
       `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
       {
         event: "order:update",
-        room: `user:${order.userId}`,
-        payload: { orderId: order._id, status: order.status },
+        room: `user:${updatedOrder.userId}`,
+        payload: { orderId: updatedOrder.id, status: updatedOrder.status },
       },
       { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
     );
     if (status === "ready_for_rider") {
       await publishEvent("ORDER_READY_FOR_RIDER", {
-        orderId: order._id.toString(),
+        orderId: updatedOrder.id,
         restaurantId: restaurant._id.toString(),
         location: restaurant.autoLocation,
       });
     }
-    res.json({ message: "order status updated successfully", order });
+
+    const kafkaEventMap: Record<string, string> = {
+      accepted: "ORDER_ACCEPTED",
+      preparing: "ORDER_PREPARING",
+      ready_for_rider: "ORDER_READY",
+    };
+    const kafkaEvent = kafkaEventMap[status];
+    if (kafkaEvent) {
+      try {
+        await publishOrderEvent(kafkaEvent, {
+          orderId: updatedOrder.id,
+          userId: updatedOrder.userId,
+          restaurantId: updatedOrder.restaurantId,
+          status,
+        });
+      } catch (err) {
+        console.error(`Kafka ${kafkaEvent} publish failed (non-fatal):`, err);
+      }
+    }
+
+    res.json({ message: "order status updated successfully", order: updatedOrder });
   },
 );
 
 export const getMyOrders = TryCatch(async (req: AuthenticatedRequest, res) => {
   if (!req.user) return res.status(401).json({ message: "Unauthorized" });
-  const orders = await Order.find({
-    userId: req.user._id.toString(),
-    paymentStatus: { $in: ["paid", "cod_pending"] },
-  }).sort({ createdAt: -1 });
+  const orders = await prisma.order.findMany({
+    where: {
+      userId: req.user._id.toString(),
+      paymentStatus: { in: [PaymentStatus.paid, PaymentStatus.cod_pending] },
+    },
+    orderBy: { createdAt: "desc" },
+  });
   res.json({ orders });
 });
 
 export const fetchSingleOrder = TryCatch(
   async (req: AuthenticatedRequest, res) => {
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
-    const order = await Order.findById(req.params.id);
+    const order = await prisma.order.findUnique({ where: { id: req.params.id as string } });
     if (!order) return res.status(404).json({ message: "Order not found" });
     if (order.userId !== req.user._id.toString()) {
       return res
@@ -280,27 +316,44 @@ export const assignRiderToOrder = TryCatch(async (req, res) => {
   if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
     return res.status(403).json({ message: "Forbidden" });
   }
-  const { orderId, riderId, riderName, riderPhone } = req.body;
-  const orderAvailable = await Order.findOne({
-    riderId,
-    status: { $ne: "delivered" },
+  const { orderId, riderId, riderName, riderPhone } = req.body as {
+    orderId: string;
+    riderId: string;
+    riderName: string;
+    riderPhone: string | number;
+  };
+
+  const orderAvailable = await prisma.order.findFirst({
+    where: { riderId, status: { not: OrderStatus.delivered } },
   });
   if (orderAvailable)
     return res.status(400).json({ message: "You already have an order" });
-  const order = await Order.findById(orderId);
-  if (order?.riderId !== null)
+
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) return res.status(404).json({ message: "Order not found" });
+  if (order.riderId !== null)
     return res.status(400).json({ message: "Order Already taken" });
-  const orderUpdated = await Order.findOneAndUpdate(
-    { _id: orderId, riderId: null },
-    { riderId, riderName, riderPhone, status: "rider_assigned" },
-    { new: true },
-  );
+
+  const result = await prisma.order.updateMany({
+    where: { id: orderId, riderId: null },
+    data: {
+      riderId,
+      riderName,
+      riderPhone: riderPhone?.toString(),
+      status: OrderStatus.rider_assigned,
+    },
+  });
+  if (result.count === 0)
+    return res.status(400).json({ message: "Order Already taken" });
+
+  const orderUpdated = await prisma.order.findUnique({ where: { id: orderId } });
+
   await axios.post(
     `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
     {
       event: "order:rider_assigned",
       room: `user:${order.userId}`,
-      payload: order,
+      payload: orderUpdated,
     },
     { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
   );
@@ -309,7 +362,7 @@ export const assignRiderToOrder = TryCatch(async (req, res) => {
     {
       event: "order:rider_assigned",
       room: `restaurant:${order.restaurantId}`,
-      payload: order,
+      payload: orderUpdated,
     },
     { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
   );
@@ -327,12 +380,12 @@ export const getCurrentOrderForRider = TryCatch(async (req, res) => {
   const riderId = req.query.riderId as string;
   if (!riderId)
     return res.status(400).json({ message: "Rider id is required" });
-  const order = await Order.findOne({
-    riderId,
-    status: { $ne: "delivered" },
-  }).populate("restaurantId");
+  const order = await prisma.order.findFirst({
+    where: { riderId, status: { not: OrderStatus.delivered } },
+  });
   if (!order) return res.status(404).json({ message: "Order not found" });
-  res.json(order);
+  const restaurant = await Restaurant.findById(order.restaurantId).lean();
+  res.json({ ...order, restaurantId: restaurant });
 });
 
 export const updateOrderStatusRider = TryCatch(async (req, res) => {
@@ -340,26 +393,24 @@ export const updateOrderStatusRider = TryCatch(async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
   const { orderId } = req.body;
-  const order = await Order.findById(orderId);
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) return res.status(404).json({ message: "Order not found" });
 
-  if (order.status === "rider_assigned") {
-    order.status = "picked_up";
-    await order.save();
+  if (order.status === OrderStatus.rider_assigned) {
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: { status: OrderStatus.picked_up },
+    });
 
-    // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    await redisClient.set(`otp:${order._id.toString()}`, otp, { EX: 600 });
-    console.log(`🔐 OTP for order ${order._id}: ${otp}`);
+    await redisClient.set(`otp:${orderId}`, otp, { EX: 600 });
 
-    // Send OTP via Socket to customer
     await axios.post(
       `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
       { event: "order:otp", room: `user:${order.userId}`, payload: { otp } },
       { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
     );
 
-    // Send OTP via Email
     try {
       const { data: userData } = await axios.get(
         `${process.env.AUTH_SERVICE_URL}/api/auth/user/${order.userId}`,
@@ -374,7 +425,7 @@ export const updateOrderStatusRider = TryCatch(async (req, res) => {
         });
       }
     } catch (err) {
-      console.error("❌ Failed to publish OTP email:", err);
+      console.error("Failed to publish OTP email:", err);
     }
 
     await axios.post(
@@ -382,7 +433,7 @@ export const updateOrderStatusRider = TryCatch(async (req, res) => {
       {
         event: "order:rider_assigned",
         room: `restaurant:${order.restaurantId}`,
-        payload: order,
+        payload: updatedOrder,
       },
       { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
     );
@@ -391,10 +442,21 @@ export const updateOrderStatusRider = TryCatch(async (req, res) => {
       {
         event: "order:rider_assigned",
         room: `user:${order.userId}`,
-        payload: order,
+        payload: updatedOrder,
       },
       { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
     );
+
+    try {
+      await publishOrderEvent("ORDER_PICKED_UP", {
+        orderId: updatedOrder.id,
+        userId: updatedOrder.userId,
+        restaurantId: updatedOrder.restaurantId,
+        riderId: updatedOrder.riderId ?? "",
+      });
+    } catch (err) {
+      console.error("Kafka ORDER_PICKED_UP publish failed (non-fatal):", err);
+    }
 
     return res.json({ message: "Order updated Successfully" });
   }
@@ -419,14 +481,18 @@ export const verifyDeliveryOtp = TryCatch(async (req, res) => {
     return res.status(400).json({ message: "Invalid OTP" });
   }
 
-  const order = await Order.findById(orderId);
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) return res.status(404).json({ message: "Order not found" });
 
-  order.status = "delivered";
-  if (order.paymentMethod === "cod") {
-    order.paymentStatus = "paid";
-  }
-  await order.save();
+  const newPaymentStatus =
+    order.paymentMethod === PaymentMethod.cod
+      ? PaymentStatus.paid
+      : order.paymentStatus;
+
+  const updatedOrder = await prisma.order.update({
+    where: { id: orderId },
+    data: { status: OrderStatus.delivered, paymentStatus: newPaymentStatus },
+  });
 
   await redisClient.del(`otp:${orderId}`);
 
@@ -434,8 +500,8 @@ export const verifyDeliveryOtp = TryCatch(async (req, res) => {
     `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
     {
       event: "order:rider_assigned",
-      room: `restaurant:${order.restaurantId}`,
-      payload: order,
+      room: `restaurant:${updatedOrder.restaurantId}`,
+      payload: updatedOrder,
     },
     { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
   );
@@ -443,20 +509,32 @@ export const verifyDeliveryOtp = TryCatch(async (req, res) => {
     `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
     {
       event: "order:rider_assigned",
-      room: `user:${order.userId}`,
-      payload: order,
+      room: `user:${updatedOrder.userId}`,
+      payload: updatedOrder,
     },
     { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
   );
 
-  return res.json({ message: "Order delivered successfully! 🎉" });
+  try {
+    await publishOrderEvent("ORDER_DELIVERED", {
+      orderId: updatedOrder.id,
+      userId: updatedOrder.userId,
+      restaurantId: updatedOrder.restaurantId,
+      riderId: updatedOrder.riderId ?? "",
+      totalAmount: updatedOrder.totalAmount,
+    });
+  } catch (err) {
+    console.error("Kafka ORDER_DELIVERED publish failed (non-fatal):", err);
+  }
+
+  return res.json({ message: "Order delivered successfully!" });
 });
 
 export const cancelOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
   if (!req.user) return res.status(401).json({ message: "Unauthorized" });
 
-  const { orderId } = req.params;
-  const order = await Order.findById(orderId);
+  const orderId = req.params.orderId as string;
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
 
   if (!order) return res.status(404).json({ message: "Order not found" });
 
@@ -466,33 +544,32 @@ export const cancelOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
       .json({ message: "You are not allowed to cancel this order" });
   }
 
-  // Cancel allowed statuses only
-  const cancellableStatuses = ["placed", "accepted"];
+  const cancellableStatuses: string[] = ["placed", "accepted"];
   if (!cancellableStatuses.includes(order.status)) {
     return res.status(400).json({
       message: `Order cannot be cancelled at this stage (${order.status}). Please contact support.`,
     });
   }
 
-  order.status = "cancelled";
-
-  // Refund logic
-  if (order.paymentStatus === "paid") {
-    order.paymentStatus = "refund_pending";
-  } else if (order.paymentStatus === "cod_pending") {
-    order.paymentStatus = "failed";
+  let newPaymentStatus: PaymentStatus = order.paymentStatus;
+  if (order.paymentStatus === PaymentStatus.paid) {
+    newPaymentStatus = PaymentStatus.refund_pending;
+  } else if (order.paymentStatus === PaymentStatus.cod_pending) {
+    newPaymentStatus = PaymentStatus.failed;
   }
 
-  await order.save();
+  const updatedOrder = await prisma.order.update({
+    where: { id: orderId as string },
+    data: { status: OrderStatus.cancelled, paymentStatus: newPaymentStatus },
+  });
 
-  // Notify restaurant
   try {
     await axios.post(
       `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
       {
         event: "order:update",
-        room: `restaurant:${order.restaurantId}`,
-        payload: { orderId: order._id, status: "cancelled" },
+        room: `restaurant:${updatedOrder.restaurantId}`,
+        payload: { orderId: updatedOrder.id, status: "cancelled" },
       },
       { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
     );
@@ -500,13 +577,25 @@ export const cancelOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
     console.error("Failed to notify restaurant of cancellation:", err);
   }
 
+  try {
+    await publishOrderEvent("ORDER_CANCELLED", {
+      orderId: updatedOrder.id,
+      userId: updatedOrder.userId,
+      restaurantId: updatedOrder.restaurantId,
+      paymentStatus: newPaymentStatus,
+    });
+  } catch (err) {
+    console.error("Kafka ORDER_CANCELLED publish failed (non-fatal):", err);
+  }
+
   res.json({
     message: "Order cancelled successfully",
     refundMessage:
-      order.paymentMethod !== "cod" && order.paymentStatus === "refund_pending"
+      order.paymentMethod !== PaymentMethod.cod &&
+      newPaymentStatus === PaymentStatus.refund_pending
         ? "Your refund will be processed in 5-7 business days."
         : null,
-    order,
+    order: updatedOrder,
   });
 });
 
@@ -515,15 +604,18 @@ export const getRiderEarnings = TryCatch(async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  const { riderId } = req.params;
+  const riderId = req.params.riderId as string;
   if (!riderId) return res.status(400).json({ message: "Rider id required" });
 
-  const orders = await Order.find({
-    riderId,
-    status: "delivered",
-  })
-    .select("riderAmount totalAmount createdAt restaurantName")
-    .lean();
+  const orders = await prisma.order.findMany({
+    where: { riderId, status: OrderStatus.delivered },
+    select: {
+      riderAmount: true,
+      totalAmount: true,
+      createdAt: true,
+      restaurantName: true,
+    },
+  });
 
   const totalEarnings = orders.reduce(
     (sum, o) => sum + (o.riderAmount || 0),
@@ -531,12 +623,11 @@ export const getRiderEarnings = TryCatch(async (req, res) => {
   );
   const totalOrders = orders.length;
 
-  // Last 7 days daily breakdown
   const last7Days: { date: string; earnings: number; orders: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const date = new Date();
     date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().split("T")[0];
+    const dateStr = date.toISOString().split("T")[0]!;
     const dayOrders = orders.filter((o) => {
       const orderDate = new Date(o.createdAt).toISOString().split("T")[0];
       return orderDate === dateStr;
@@ -548,8 +639,7 @@ export const getRiderEarnings = TryCatch(async (req, res) => {
     });
   }
 
-  // Today's earnings
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split("T")[0]!;
   const todayOrders = orders.filter(
     (o) => new Date(o.createdAt).toISOString().split("T")[0] === today,
   );

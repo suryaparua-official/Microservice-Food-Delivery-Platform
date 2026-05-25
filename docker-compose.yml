@@ -32,6 +32,59 @@ services:
       retries: 5
     command: redis-server --appendonly yes
 
+  # Zookeeper (required by Kafka)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: tomato-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - tomato-network
+
+  # Kafka (order audit event streaming)
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: tomato-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - tomato-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # PostgreSQL (restaurant service — Order + Address)
+  postgres:
+    image: postgres:16-alpine
+    container_name: tomato-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: restaurant_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tomato-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # RabbitMQ
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
@@ -100,8 +153,12 @@ services:
       - RIDER_QUEUE=${RIDER_QUEUE}
       - ORDER_READY_QUEUE=${ORDER_READY_QUEUE}
       - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/restaurant_db
+      - KAFKA_BROKER=kafka:9092
     depends_on:
       mongodb:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -138,6 +195,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - GMAIL_USER=${GMAIL_USER}
       - GMAIL_PASS=${GMAIL_PASS}
+      - KAFKA_BROKER=kafka:9092
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -265,6 +323,15 @@ services:
       - tomato-network
     restart: unless-stopped
 
+  # k6:
+  #   image: grafana/k6
+  #   container_name: tomato-k6
+  #   volumes:
+  #     - ./load-tests:/scripts
+  #   command: run /scripts/full-flow.test.js
+  #   networks:
+  #     - tomato-network
+
 networks:
   tomato-network:
     driver: bridge
@@ -277,3 +344,5 @@ volumes:
     name: tomato-rabbitmq-data
   redis_data:
     name: tomato-redis-data
+  postgres_data:
+    name: tomato-postgres-data
