@@ -7,14 +7,16 @@ const cbOptions = {
   resetTimeout: 30000,
 };
 
-// Wraps GET calls to the Auth service
-const callAuthService = (url: string, token: string): Promise<AxiosResponse> =>
-  axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+// Wraps GET calls to the Auth service (accepts arbitrary headers)
+const callAuthService = (
+  url: string,
+  headers: Record<string, string>
+): Promise<AxiosResponse> => axios.get(url, { headers });
 
 // Wraps POST calls to the Realtime service
 const callRealtimeService = (
   url: string,
-  payload: Record<string, unknown>,
+  payload: Record<string, unknown>
 ): Promise<AxiosResponse> =>
   axios.post(url, payload, {
     headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY },
@@ -23,26 +25,26 @@ const callRealtimeService = (
 export const authBreaker = new CircuitBreaker(callAuthService, cbOptions);
 authBreaker.fallback(() => null);
 authBreaker.on("open", () =>
-  console.log("[CB] Auth service circuit OPEN — calls blocked"),
+  console.log("[CB] Auth service circuit OPEN — calls blocked")
 );
 authBreaker.on("halfOpen", () =>
-  console.log("[CB] Auth service circuit HALF-OPEN — testing"),
+  console.log("[CB] Auth service circuit HALF-OPEN — testing")
 );
 authBreaker.on("close", () =>
-  console.log("[CB] Auth service circuit CLOSED — calls restored"),
+  console.log("[CB] Auth service circuit CLOSED — calls restored")
 );
 
 export const realtimeBreaker = new CircuitBreaker(
   callRealtimeService,
-  cbOptions,
+  cbOptions
 );
 realtimeBreaker.fallback(() => null);
 realtimeBreaker.on("open", () =>
-  console.log("[CB] Realtime service circuit OPEN — calls blocked"),
+  console.log("[CB] Realtime service circuit OPEN — calls blocked")
 );
 realtimeBreaker.on("halfOpen", () =>
-  console.log("[CB] Realtime service circuit HALF-OPEN — testing"),
+  console.log("[CB] Realtime service circuit HALF-OPEN — testing")
 );
 realtimeBreaker.on("close", () =>
-  console.log("[CB] Realtime service circuit CLOSED — calls restored"),
+  console.log("[CB] Realtime service circuit CLOSED — calls restored")
 );

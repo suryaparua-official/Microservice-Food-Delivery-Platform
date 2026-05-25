@@ -1,4 +1,3 @@
-import axios from "axios";
 import { AuthenticatedRequest } from "../middlewares/isAuth.js";
 import TryCatch from "../middlewares/trycatch.js";
 import { prisma } from "../config/prisma.js";
@@ -13,6 +12,42 @@ import {
   publishOrderPlacedEmail,
 } from "../config/email.publisher.js";
 import { publishOrderEvent } from "../config/kafka.js";
+import {
+  realtimeBreaker,
+  authBreaker,
+} from "../config/circuitBreaker.js";
+
+const REALTIME_EMIT_URL = () =>
+  `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`;
+
+const emitToRealtime = async (
+  event: string,
+  room: string,
+  payload: unknown
+): Promise<void> => {
+  try {
+    await realtimeBreaker.fire(REALTIME_EMIT_URL(), {
+      event,
+      room,
+      payload,
+    } as Record<string, unknown>);
+  } catch (err) {
+    console.warn("[CB] Realtime emit failed (non-fatal):", err);
+  }
+};
+
+const fetchUserData = async (userId: string) => {
+  try {
+    const result = await authBreaker.fire(
+      `${process.env.AUTH_SERVICE_URL}/api/auth/user/${userId}`,
+      { "x-internal-key": process.env.INTERNAL_SERVICE_KEY! }
+    );
+    return (result as any)?.data ?? null;
+  } catch (err) {
+    console.warn("[CB] Auth service unavailable (non-fatal):", err);
+    return null;
+  }
+};
 
 export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
   const user = req.user;
@@ -155,10 +190,7 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
     await redisClearCart(user._id.toString());
 
     try {
-      const { data: userData } = await axios.get(
-        `${process.env.AUTH_SERVICE_URL}/api/auth/user/${user._id.toString()}`,
-        { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
-      );
+      const userData = await fetchUserData(user._id.toString());
       if (userData?.email) {
         await publishOrderPlacedEmail({
           to: userData.email,
@@ -202,16 +234,34 @@ export const fetchRestaurantOrders = TryCatch(
     if (!user) return res.status(401).json({ message: "Unauthorized" });
     if (!restaurantId)
       return res.status(400).json({ message: "Restaurant id is required" });
-    const limit = req.query.limit ? Number(req.query.limit) : undefined;
-    const orders = await prisma.order.findMany({
-      where: {
-        restaurantId,
-        paymentStatus: { in: [PaymentStatus.paid, PaymentStatus.cod_pending] },
-      },
-      orderBy: { createdAt: "desc" },
-      take: limit,
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+
+    const where = {
+      restaurantId,
+      paymentStatus: { in: [PaymentStatus.paid, PaymentStatus.cod_pending] },
+    };
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    return res.json({
+      success: true,
+      count: orders.length,
+      orders,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
     });
-    return res.json({ success: true, count: orders.length, orders });
   },
 );
 
@@ -246,15 +296,12 @@ export const updateOrderStatus = TryCatch(
       where: { id: orderId },
       data: { status: status as OrderStatus },
     });
-    await axios.post(
-      `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
-      {
-        event: "order:update",
-        room: `user:${updatedOrder.userId}`,
-        payload: { orderId: updatedOrder.id, status: updatedOrder.status },
-      },
-      { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
-    );
+
+    await emitToRealtime("order:update", `user:${updatedOrder.userId}`, {
+      orderId: updatedOrder.id,
+      status: updatedOrder.status,
+    });
+
     if (status === "ready_for_rider") {
       await publishEvent("ORDER_READY_FOR_RIDER", {
         orderId: updatedOrder.id,
@@ -288,14 +335,27 @@ export const updateOrderStatus = TryCatch(
 
 export const getMyOrders = TryCatch(async (req: AuthenticatedRequest, res) => {
   if (!req.user) return res.status(401).json({ message: "Unauthorized" });
-  const orders = await prisma.order.findMany({
-    where: {
-      userId: req.user._id.toString(),
-      paymentStatus: { in: [PaymentStatus.paid, PaymentStatus.cod_pending] },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  res.json({ orders });
+
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  const skip = (page - 1) * limit;
+
+  const where = {
+    userId: req.user._id.toString(),
+    paymentStatus: { in: [PaymentStatus.paid, PaymentStatus.cod_pending] },
+  };
+
+  const [orders, total] = await Promise.all([
+    prisma.order.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.order.count({ where }),
+  ]);
+
+  res.json({ orders, total, page, totalPages: Math.ceil(total / limit) });
 });
 
 export const fetchSingleOrder = TryCatch(
@@ -348,24 +408,9 @@ export const assignRiderToOrder = TryCatch(async (req, res) => {
 
   const orderUpdated = await prisma.order.findUnique({ where: { id: orderId } });
 
-  await axios.post(
-    `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
-    {
-      event: "order:rider_assigned",
-      room: `user:${order.userId}`,
-      payload: orderUpdated,
-    },
-    { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
-  );
-  await axios.post(
-    `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
-    {
-      event: "order:rider_assigned",
-      room: `restaurant:${order.restaurantId}`,
-      payload: orderUpdated,
-    },
-    { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
-  );
+  await emitToRealtime("order:rider_assigned", `user:${order.userId}`, orderUpdated);
+  await emitToRealtime("order:rider_assigned", `restaurant:${order.restaurantId}`, orderUpdated);
+
   res.json({
     message: "Rider Assigned Successfully",
     success: true,
@@ -405,17 +450,10 @@ export const updateOrderStatusRider = TryCatch(async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     await redisClient.set(`otp:${orderId}`, otp, { EX: 600 });
 
-    await axios.post(
-      `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
-      { event: "order:otp", room: `user:${order.userId}`, payload: { otp } },
-      { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
-    );
+    await emitToRealtime("order:otp", `user:${order.userId}`, { otp });
 
     try {
-      const { data: userData } = await axios.get(
-        `${process.env.AUTH_SERVICE_URL}/api/auth/user/${order.userId}`,
-        { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
-      );
+      const userData = await fetchUserData(order.userId);
       if (userData?.email) {
         await publishOtpEmail({
           to: userData.email,
@@ -428,24 +466,8 @@ export const updateOrderStatusRider = TryCatch(async (req, res) => {
       console.error("Failed to publish OTP email:", err);
     }
 
-    await axios.post(
-      `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
-      {
-        event: "order:rider_assigned",
-        room: `restaurant:${order.restaurantId}`,
-        payload: updatedOrder,
-      },
-      { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
-    );
-    await axios.post(
-      `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
-      {
-        event: "order:rider_assigned",
-        room: `user:${order.userId}`,
-        payload: updatedOrder,
-      },
-      { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
-    );
+    await emitToRealtime("order:rider_assigned", `restaurant:${order.restaurantId}`, updatedOrder);
+    await emitToRealtime("order:rider_assigned", `user:${order.userId}`, updatedOrder);
 
     try {
       await publishOrderEvent("ORDER_PICKED_UP", {
@@ -496,24 +518,8 @@ export const verifyDeliveryOtp = TryCatch(async (req, res) => {
 
   await redisClient.del(`otp:${orderId}`);
 
-  await axios.post(
-    `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
-    {
-      event: "order:rider_assigned",
-      room: `restaurant:${updatedOrder.restaurantId}`,
-      payload: updatedOrder,
-    },
-    { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
-  );
-  await axios.post(
-    `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
-    {
-      event: "order:rider_assigned",
-      room: `user:${updatedOrder.userId}`,
-      payload: updatedOrder,
-    },
-    { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
-  );
+  await emitToRealtime("order:rider_assigned", `restaurant:${updatedOrder.restaurantId}`, updatedOrder);
+  await emitToRealtime("order:rider_assigned", `user:${updatedOrder.userId}`, updatedOrder);
 
   try {
     await publishOrderEvent("ORDER_DELIVERED", {
@@ -563,19 +569,10 @@ export const cancelOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
     data: { status: OrderStatus.cancelled, paymentStatus: newPaymentStatus },
   });
 
-  try {
-    await axios.post(
-      `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
-      {
-        event: "order:update",
-        room: `restaurant:${updatedOrder.restaurantId}`,
-        payload: { orderId: updatedOrder.id, status: "cancelled" },
-      },
-      { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
-    );
-  } catch (err) {
-    console.error("Failed to notify restaurant of cancellation:", err);
-  }
+  await emitToRealtime("order:update", `restaurant:${updatedOrder.restaurantId}`, {
+    orderId: updatedOrder.id,
+    status: "cancelled",
+  });
 
   try {
     await publishOrderEvent("ORDER_CANCELLED", {

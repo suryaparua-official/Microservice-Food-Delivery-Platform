@@ -23,14 +23,28 @@ app.use(express.json());
 
 app.use("/api/v1/internal", internalRoute);
 
-const server = http.createServer(app);
-
-initSocket(server);
-
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-server.listen(process.env.PORT, () => {
-  console.log(`Realtime service is running port ${process.env.PORT}`);
-});
+async function startServer() {
+  const server = http.createServer(app);
+  initSocket(server);
+
+  server.listen(process.env.PORT, () => {
+    console.log(`Realtime service is running port ${process.env.PORT}`);
+  });
+
+  const shutdown = async () => {
+    console.log("Shutting down gracefully...");
+    server.close(async () => {
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 25000);
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+}
+
+startServer();

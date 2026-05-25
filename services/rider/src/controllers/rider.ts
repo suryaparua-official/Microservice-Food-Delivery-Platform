@@ -219,6 +219,14 @@ export const verifyOtp = TryCatch(async (req: AuthenticatedRequest, res) => {
   }
 });
 
+export const getPendingRiders = TryCatch(async (req, res) => {
+  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+  const riders = await Rider.find({ isVerified: false });
+  res.json({ count: riders.length, riders });
+});
+
 export const getMyEarnings = TryCatch(
   async (req: AuthenticatedRequest, res) => {
     const userId = req.user?._id;

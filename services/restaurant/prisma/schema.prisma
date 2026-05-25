@@ -30,6 +30,12 @@ model Order {
   expiresAt       DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([restaurantId])
+  @@index([riderId])
+  @@index([status])
+  @@index([paymentStatus])
 }
 
 model Address {
@@ -41,6 +47,8 @@ model Address {
   longitude        Float
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  @@index([userId])
 }
 
 enum OrderStatus {

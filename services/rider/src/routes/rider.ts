@@ -5,12 +5,13 @@ import {
   addRiderProfile,
   fetchMyCurrentOrder,
   fetchMyProfile,
+  getPendingRiders,
   toggleRiderAvailablity,
   updateOrderStatus,
   verifyOtp,
+  getMyEarnings,
 } from "../controllers/rider.js";
 import uploadFile from "../middlewares/multer.js";
-import { getMyEarnings } from "../controllers/rider.js";
 
 const router = express.Router();
 
@@ -154,5 +155,6 @@ router.post("/order/verify/:orderId", isAuth, verifyOtp);
  *         description: Unauthorized
  */
 router.get("/earnings", isAuth, getMyEarnings);
+router.get("/pending", getPendingRiders);
 
 export default router;

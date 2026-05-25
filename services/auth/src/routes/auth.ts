@@ -3,6 +3,7 @@ import {
   addUserRole,
   getUserById,
   loginUser,
+  logoutUser,
   myProfile,
 } from "../controllers/auth.js";
 import { isAuth } from "../middlewares/isAuth.js";
@@ -106,6 +107,7 @@ router.get("/me", isAuth, myProfile);
  *       404:
  *         description: User not found
  */
+router.post("/logout", isAuth, logoutUser);
 router.get("/user/:userId", getUserById);
 
 export default router;

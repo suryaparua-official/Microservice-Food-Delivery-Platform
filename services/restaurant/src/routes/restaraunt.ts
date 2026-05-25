@@ -5,6 +5,7 @@ import {
   fetchMyRestaurant,
   fetchSingleRestaurant,
   getNearbyRestaurant,
+  getPendingRestaurants,
   updateRestaurant,
   updateStatusRestaurant,
 } from "../controllers/restaraunt.js";
@@ -18,6 +19,7 @@ router.put("/status", isAuth, isSeller, updateStatusRestaurant);
 router.put("/edit", isAuth, isSeller, updateRestaurant);
 
 router.get("/all", getNearbyRestaurant);
+router.get("/pending", getPendingRestaurants);
 router.get("/:id", fetchSingleRestaurant);
 
 export default router;

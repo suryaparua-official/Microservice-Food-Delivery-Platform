@@ -94,15 +94,13 @@ export const fetchMyRestaurant = TryCatch(
     if (!req.user.restaurantId) {
       const token = jwt.sign(
         {
-          user: {
-            ...req.user,
-            restaurantId: restaurant._id,
-          },
+          sub: req.user._id as string,
+          role: req.user.role,
+          restaurantId: restaurant._id.toString(),
+          tokenVersion: req.user.tokenVersion ?? 0,
         },
         process.env.JWT_SEC as string,
-        {
-          expiresIn: "15d",
-        }
+        { expiresIn: "15d" }
       );
 
       return res.json({ restaurant, token });
@@ -233,4 +231,12 @@ export const getNearbyRestaurant = TryCatch(async (req, res) => {
 export const fetchSingleRestaurant = TryCatch(async (req, res) => {
   const restaurant = await Restaurant.findById(req.params.id);
   res.json(restaurant);
+});
+
+export const getPendingRestaurants = TryCatch(async (req, res) => {
+  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+  const restaurants = await Restaurant.find({ isVerified: false });
+  res.json({ count: restaurants.length, restaurants });
 });

@@ -83,9 +83,10 @@ export const redisGetCart = async (userId: string) => {
     return { cart: [], subtotal: 0, cartLength: 0 };
   }
 
-  let subtotal = 0;
-  let cartLength = 0;
-  const cart = [];
+  // Collect all itemIds and the single restaurantId in one pass (no DB calls)
+  const itemIds: string[] = [];
+  let cartRestaurantId: string | null = null;
+  const entries: { field: string; itemId: string; restaurantId: string; quantity: number }[] = [];
 
   for (const [field, qtyStr] of Object.entries(fields)) {
     const parts = field.split(":");
@@ -93,9 +94,30 @@ export const redisGetCart = async (userId: string) => {
     const restaurantId = parts[1];
     if (!itemId || !restaurantId) continue;
     const quantity = qtyStr ? parseInt(qtyStr) : 1;
-    const item = await MenuItem.findById(itemId).lean();
-    const restaurant = await Restaurant.findById(restaurantId).lean();
-    if (!item || !restaurant) continue;
+    itemIds.push(itemId);
+    cartRestaurantId = restaurantId;
+    entries.push({ field, itemId, restaurantId, quantity });
+  }
+
+  if (entries.length === 0) return { cart: [], subtotal: 0, cartLength: 0 };
+
+  // Single batch query for all menu items + single restaurant fetch
+  const [items, restaurant] = await Promise.all([
+    MenuItem.find({ _id: { $in: itemIds } }).lean(),
+    cartRestaurantId ? Restaurant.findById(cartRestaurantId).lean() : null,
+  ]);
+
+  if (!restaurant) return { cart: [], subtotal: 0, cartLength: 0 };
+
+  const itemMap = new Map(items.map((item) => [(item as any)._id.toString(), item]));
+
+  let subtotal = 0;
+  let cartLength = 0;
+  const cart = [];
+
+  for (const { field, itemId, quantity } of entries) {
+    const item = itemMap.get(itemId);
+    if (!item) continue;
     subtotal += (item as any).price * quantity;
     cartLength += quantity;
     cart.push({

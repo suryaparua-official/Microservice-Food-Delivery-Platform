@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import http from "http";
 import connectDB from "./config/db.js";
 import cors from "cors";
 import riderRoutes from "./routes/rider.js";
@@ -12,9 +13,6 @@ import { swaggerSpec } from "./config/swagger.js";
 
 dotenv.config();
 setupAxiosRetry();
-
-await connectRabbitMQ();
-startOrderReadyConsumer();
 
 const app = express();
 app.use(express.json());
@@ -30,15 +28,34 @@ app.use(
 );
 
 app.use("/api/rider", riderRoutes);
-
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-app.listen(process.env.PORT, () => {
-  console.log(`Rider service is running on port ${process.env.PORT}`);
-  connectDB();
-  connectRedis();
-});
+async function startServer() {
+  await connectDB();
+  await connectRedis();
+  await connectRabbitMQ();
+  startOrderReadyConsumer();
+
+  const server = http.createServer(app);
+
+  server.listen(process.env.PORT, () => {
+    console.log(`Rider service is running on port ${process.env.PORT}`);
+  });
+
+  const shutdown = async () => {
+    console.log("Shutting down gracefully...");
+    server.close(async () => {
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 25000);
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+}
+
+startServer();

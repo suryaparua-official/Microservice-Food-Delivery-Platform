@@ -1,6 +1,7 @@
 import amqp from "amqplib";
 
 let channel: amqp.Channel;
+let isReconnecting = false;
 
 const MAX_RETRIES = 10;
 const RETRY_DELAY_MS = 3000;
@@ -14,6 +15,28 @@ export const connectRabbitMQ = async () => {
       await channel.assertQueue(process.env.RIDER_QUEUE!, { durable: true });
       await channel.assertQueue(process.env.ORDER_READY_QUEUE!, {
         durable: true,
+      });
+
+      connection.on("error", (err) => {
+        console.error("RabbitMQ connection error:", err);
+        if (!isReconnecting) {
+          isReconnecting = true;
+          setTimeout(() => {
+            isReconnecting = false;
+            connectRabbitMQ();
+          }, 5000);
+        }
+      });
+
+      connection.on("close", () => {
+        console.log("RabbitMQ connection closed, reconnecting...");
+        if (!isReconnecting) {
+          isReconnecting = true;
+          setTimeout(() => {
+            isReconnecting = false;
+            connectRabbitMQ();
+          }, 5000);
+        }
       });
 
       console.log("connected To Rabbitmq(rider service)");

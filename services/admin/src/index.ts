@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import http from "http";
 import adminRoutes from "./routes/admin.js";
 import cors from "cors";
 
@@ -16,6 +17,7 @@ app.use(
     credentials: true,
   }),
 );
+app.use(express.json());
 
 app.use("/api/v1", adminRoutes);
 
@@ -23,6 +25,23 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-app.listen(process.env.PORT, () => {
-  console.log(`Admin Service is running on port ${process.env.PORT}`);
-});
+async function startServer() {
+  const server = http.createServer(app);
+
+  server.listen(process.env.PORT, () => {
+    console.log(`Admin Service is running on port ${process.env.PORT}`);
+  });
+
+  const shutdown = async () => {
+    console.log("Shutting down gracefully...");
+    server.close(async () => {
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 25000);
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+}
+
+startServer();

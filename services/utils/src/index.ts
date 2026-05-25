@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import http from "http";
 import cloudinary from "cloudinary";
 import cors from "cors";
 import uploadRoutes from "./routes/cloudinary.js";
@@ -11,16 +12,6 @@ import { startEmailConsumer } from "./config/email.consumer.js";
 import { startKafkaConsumer } from "./config/kafka.consumer.js";
 
 dotenv.config();
-
-await connectRabbitMQ();
-await connectRedis();
-await startEmailConsumer();
-
-try {
-  await startKafkaConsumer();
-} catch (err) {
-  console.error("Kafka consumer connection failed (non-fatal):", err);
-}
 
 const app = express();
 
@@ -60,6 +51,33 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Utils service is running on port ${PORT}`);
-});
+async function startServer() {
+  await connectRabbitMQ();
+  await connectRedis();
+  await startEmailConsumer();
+
+  try {
+    await startKafkaConsumer();
+  } catch (err) {
+    console.error("Kafka consumer connection failed (non-fatal):", err);
+  }
+
+  const server = http.createServer(app);
+
+  server.listen(PORT, () => {
+    console.log(`Utils service is running on port ${PORT}`);
+  });
+
+  const shutdown = async () => {
+    console.log("Shutting down gracefully...");
+    server.close(async () => {
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 25000);
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+}
+
+startServer();

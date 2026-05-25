@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import http from "http";
 import authRoutes from "./routes/auth.js";
 import connectDB from "./config/db.js";
 import { connectRedis } from "./config/redis.js";
@@ -27,9 +28,7 @@ app.use(express.json());
 app.use(globalLimiter);
 app.use("/api/auth/login", loginLimiter);
 
-// Swagger docs
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
 app.use("/api/auth", authRoutes);
 
 app.get("/health", (req, res) => {
@@ -38,9 +37,27 @@ app.get("/health", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, async () => {
-  console.log(`Auth service running on port ${PORT}`);
-  console.log(`Swagger docs: http://localhost:${PORT}/api/docs`);
+async function startServer() {
   await connectDB();
   await connectRedis();
-});
+
+  const server = http.createServer(app);
+
+  server.listen(PORT, () => {
+    console.log(`Auth service running on port ${PORT}`);
+    console.log(`Swagger docs: http://localhost:${PORT}/api/docs`);
+  });
+
+  const shutdown = async () => {
+    console.log("Shutting down gracefully...");
+    server.close(async () => {
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 25000);
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+}
+
+startServer();

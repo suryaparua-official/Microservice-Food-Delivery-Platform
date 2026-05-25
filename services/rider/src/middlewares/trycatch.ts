@@ -5,9 +5,12 @@ const TryCatch = (handler: RequestHandler): RequestHandler => {
     try {
       await handler(req, res, next);
     } catch (err: any) {
-      res.status(500).json({
-        message: err.message,
-      });
+      if (err.isOperational) {
+        res.status(err.statusCode || 400).json({ message: err.message });
+      } else {
+        console.error("Unexpected error:", err);
+        res.status(500).json({ message: "Something went wrong" });
+      }
     }
   };
 };

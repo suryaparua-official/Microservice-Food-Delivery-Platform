@@ -1,6 +1,7 @@
 import express from "express";
 import connectDB from "./config/db.js";
 import dotenv from "dotenv";
+import http from "http";
 import restaurantRoutes from "./routes/restaraunt.js";
 import itemRoutes from "./routes/menuitem.js";
 import cartRoutes from "./routes/cart.js";
@@ -18,15 +19,6 @@ import { connectKafkaProducer } from "./config/kafka.js";
 
 dotenv.config();
 setupAxiosRetry();
-
-await connectRabbitMQ();
-startPaymentConsumer();
-
-try {
-  await connectKafkaProducer();
-} catch (err) {
-  console.error("Kafka producer connection failed (non-fatal):", err);
-}
 
 const app = express();
 
@@ -57,10 +49,38 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-app.listen(PORT, async () => {
-  console.log(`Restaurant service is running on port ${PORT}`);
-  connectDB();
-  connectRedis();
+async function startServer() {
+  await connectDB();
+  await connectRedis();
   await prisma.$connect();
   console.log("Prisma connected to PostgreSQL");
-});
+
+  await connectRabbitMQ();
+  startPaymentConsumer();
+
+  try {
+    await connectKafkaProducer();
+  } catch (err) {
+    console.error("Kafka producer connection failed (non-fatal):", err);
+  }
+
+  const server = http.createServer(app);
+
+  server.listen(PORT, () => {
+    console.log(`Restaurant service is running on port ${PORT}`);
+  });
+
+  const shutdown = async () => {
+    console.log("Shutting down gracefully...");
+    server.close(async () => {
+      await prisma.$disconnect();
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 25000);
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+}
+
+startServer();

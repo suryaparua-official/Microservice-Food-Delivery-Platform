@@ -5,6 +5,8 @@ export interface IUser extends Document {
   email: string;
   image: string;
   role: string;
+  restaurantId?: string | null;
+  tokenVersion: number;
 }
 
 const schema: Schema<IUser> = new Schema(
@@ -25,6 +27,14 @@ const schema: Schema<IUser> = new Schema(
     role: {
       type: String,
       default: null,
+    },
+    restaurantId: {
+      type: String,
+      default: null,
+    },
+    tokenVersion: {
+      type: Number,
+      default: 0,
     },
   },
   {

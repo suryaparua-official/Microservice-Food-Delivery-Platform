@@ -4,10 +4,17 @@ import jwt from "jsonwebtoken";
 
 let io: Server;
 
+const ALLOWED_ORIGINS = [
+  "https://swiggy-surya.duckdns.org",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+
 export const initSocket = (server: http.Server) => {
   io = new Server(server, {
     cors: {
-      origin: "*",
+      origin: ALLOWED_ORIGINS,
+      credentials: true,
     },
   });
 
@@ -21,11 +28,15 @@ export const initSocket = (server: http.Server) => {
 
       const decoded = jwt.verify(token, process.env.JWT_SEC!) as any;
 
-      if (!decoded || !decoded.user) {
+      if (!decoded || !decoded.sub) {
         return next(new Error("Unauthorized"));
       }
 
-      socket.data.user = decoded.user;
+      socket.data.user = {
+        _id: decoded.sub,
+        role: decoded.role ?? "",
+        restaurantId: decoded.restaurantId ?? null,
+      };
 
       next();
     } catch (error) {

@@ -1,4 +1,6 @@
 import { Kafka } from "kafkajs";
+import fs from "fs";
+import path from "path";
 
 const kafka = new Kafka({
   clientId: "tomato-audit",
@@ -18,7 +20,16 @@ interface AuditLog {
 }
 
 const auditLogs: AuditLog[] = [];
-const MAX_LOGS = 1000;
+const MAX_IN_MEMORY = 100;
+const LOG_FILE = path.join(process.cwd(), "audit.log");
+
+const appendToFile = (log: AuditLog) => {
+  try {
+    fs.appendFileSync(LOG_FILE, JSON.stringify(log) + "\n");
+  } catch (err) {
+    console.error("[AUDIT] Failed to write to audit.log:", err);
+  }
+};
 
 export const startKafkaConsumer = async (): Promise<void> => {
   await consumer.connect();
@@ -35,9 +46,13 @@ export const startKafkaConsumer = async (): Promise<void> => {
         `[AUDIT] ${log.receivedAt} | ${log.eventType} | order:${log.orderId} | user:${log.userId}`,
       );
 
+      // Persist all events to file
+      appendToFile(log);
+
+      // Keep last MAX_IN_MEMORY entries in memory for API access
       auditLogs.unshift(log);
-      if (auditLogs.length > MAX_LOGS) {
-        auditLogs.splice(MAX_LOGS);
+      if (auditLogs.length > MAX_IN_MEMORY) {
+        auditLogs.splice(MAX_IN_MEMORY);
       }
     },
   });

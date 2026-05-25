@@ -1,9 +1,9 @@
-import axios from "axios";
 import { prisma } from "../config/prisma.js";
 import { PaymentStatus, OrderStatus } from "@prisma/client";
 import { getChannel } from "./rabbitmq.js";
 import { redisClearCart } from "./cartRedis.js";
 import { publishOrderPlacedEmail } from "./email.publisher.js";
+import { authBreaker, realtimeBreaker } from "./circuitBreaker.js";
 
 export const startPaymentConsumer = async () => {
   const channel = getChannel();
@@ -43,11 +43,11 @@ export const startPaymentConsumer = async () => {
       await redisClearCart(order.userId);
 
       try {
-        const { data: userData } = await axios.get(
+        const result = await authBreaker.fire(
           `${process.env.AUTH_SERVICE_URL}/api/auth/user/${order.userId}`,
-          { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
+          { "x-internal-key": process.env.INTERNAL_SERVICE_KEY! }
         );
-
+        const userData = (result as any)?.data ?? null;
         if (userData?.email) {
           await publishOrderPlacedEmail({
             to: userData.email,
@@ -62,19 +62,23 @@ export const startPaymentConsumer = async () => {
         console.error("Failed to send order email:", emailErr);
       }
 
-      await axios.post(
-        `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
-        {
-          event: "order:new",
-          room: `restaurant:${order.restaurantId}`,
-          payload: { orderId: order.id },
-        },
-        { headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY } },
-      );
+      try {
+        await realtimeBreaker.fire(
+          `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
+          {
+            event: "order:new",
+            room: `restaurant:${order.restaurantId}`,
+            payload: { orderId: order.id },
+          } as Record<string, unknown>
+        );
+      } catch (realtimeErr) {
+        console.warn("[CB] Realtime emit failed (non-fatal):", realtimeErr);
+      }
 
       channel.ack(msg);
     } catch (error) {
-      console.error("Payment consumer error:", error);
+      console.error("❌ Payment consumer error:", error);
+      channel.nack(msg, false, true); // requeue = true
     }
   });
 };
