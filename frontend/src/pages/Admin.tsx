@@ -107,7 +107,7 @@ const Admin = () => {
             letterSpacing: "-0.5px",
           }}
         >
-          tomato
+          zestify
           <span style={{ color: "rgba(255,77,28,0.35)", fontSize: 24 }}>.</span>
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

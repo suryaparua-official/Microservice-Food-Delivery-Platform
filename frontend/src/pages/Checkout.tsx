@@ -117,7 +117,7 @@ const Checkout = () => {
         key,
         amount: amount * 100,
         currency: "INR",
-        name: "Tomato",
+        name: "Zestify",
         description: "Food Order Payment",
         order_id: razorpayOrderId,
         handler: async (response: any) => {

@@ -19,7 +19,7 @@ const AdminLogin = () => {
       const token = result.data.token;
       const user = result.data.user;
 
-      // শুধু admin role allow করো
+      // Only allow admin role through this portal
       if (!user.role || user.role !== "admin") {
         setError(
           user.role
@@ -33,7 +33,7 @@ const AdminLogin = () => {
 
       localStorage.setItem("token", token);
       toast.success("Welcome, Admin!");
-      // full reload — AppContext নতুন করে user fetch করবে
+      // Full page reload so AppContext re-fetches the authenticated user
       window.location.href = "/";
     } catch {
       toast.error("Sign in failed. Please try again.");
@@ -102,7 +102,7 @@ const AdminLogin = () => {
               marginBottom: 12,
             }}
           >
-            tomato
+            zestify
             <span style={{ color: "rgba(255,77,28,0.35)", fontSize: 38 }}>
               .
             </span>

@@ -1,9 +1,11 @@
+import { FaTwitter, FaInstagram, FaLinkedinIn } from "react-icons/fa";
+
 const Footer = () => (
   <footer
     style={{
       background: "#111",
       borderTop: "1px solid rgba(255,255,255,0.06)",
-      padding: "40px 24px 24px",
+      padding: "32px 24px 16px",
       marginTop: 40,
     }}
   >
@@ -13,7 +15,7 @@ const Footer = () => (
           display: "grid",
           gridTemplateColumns: "2fr 1fr 1fr 1fr",
           gap: 40,
-          marginBottom: 40,
+          marginBottom: 24,
         }}
       >
         {/* Brand */}
@@ -27,7 +29,7 @@ const Footer = () => (
               marginBottom: 12,
             }}
           >
-            tomato
+            zestify
             <span style={{ color: "rgba(255,77,28,0.35)", fontSize: 34 }}>
               .
             </span>
@@ -180,13 +182,20 @@ const Footer = () => (
         }}
       >
         <p style={{ fontSize: 12, color: "#333" }}>
-          © 2025 Tomato. All rights reserved.
+          © 2025 Zestify. All rights reserved.
         </p>
         <div style={{ display: "flex", gap: 16 }}>
-          {["🐦 Twitter", "📸 Instagram", "💼 LinkedIn"].map((item) => (
+          {[
+            { Icon: FaTwitter, label: "Twitter" },
+            { Icon: FaInstagram, label: "Instagram" },
+            { Icon: FaLinkedinIn, label: "LinkedIn" },
+          ].map(({ Icon, label }) => (
             <span
-              key={item}
+              key={label}
               style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
                 fontSize: 12,
                 color: "#444",
                 cursor: "pointer",
@@ -199,7 +208,8 @@ const Footer = () => (
                 (e.currentTarget as HTMLSpanElement).style.color = "#444";
               }}
             >
-              {item}
+              <Icon size={13} />
+              {label}
             </span>
           ))}
         </div>

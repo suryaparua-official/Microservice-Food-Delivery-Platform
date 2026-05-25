@@ -124,7 +124,7 @@ const Restaurant = () => {
             letterSpacing: "-0.5px",
           }}
         >
-          tomato
+          zestify
           <span style={{ color: "rgba(255,77,28,0.35)", fontSize: 24 }}>.</span>
         </span>
         <span style={{ fontSize: 12, color: "#555", fontWeight: 500 }}>

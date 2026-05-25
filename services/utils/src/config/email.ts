@@ -37,7 +37,7 @@ export const sendOrderPlacedEmail = async (
         <!-- Header -->
         <div style="background:#161616;padding:28px 32px;border-bottom:1px solid #2a2a2a">
           <h1 style="margin:0;font-size:28px;font-weight:800;color:#FF4D1C;letter-spacing:-1px">
-            tomato<span style="color:rgba(255,77,28,0.35)">.</span>
+            zestify<span style="color:rgba(255,77,28,0.35)">.</span>
           </h1>
         </div>
 
@@ -89,7 +89,7 @@ export const sendOrderPlacedEmail = async (
 
         <!-- Footer -->
         <div style="padding:20px 32px;border-top:1px solid #2a2a2a;text-align:center">
-          <p style="margin:0;font-size:11px;color:#444">© 2025 Tomato. Food delivery, redefined.</p>
+          <p style="margin:0;font-size:11px;color:#444">© 2025 Zestify. Food delivery, redefined.</p>
         </div>
       </div>
     </body>
@@ -97,7 +97,7 @@ export const sendOrderPlacedEmail = async (
   `;
 
   await transporter.sendMail({
-    from: `"Tomato 🍅" <${process.env.GMAIL_USER}>`,
+    from: `"Zestify" <${process.env.GMAIL_USER}>`,
     to,
     subject: `✅ Order Confirmed — ${restaurantName}`,
     html,
@@ -122,7 +122,7 @@ export const sendOtpEmail = async (
         <!-- Header -->
         <div style="background:#161616;padding:28px 32px;border-bottom:1px solid #2a2a2a">
           <h1 style="margin:0;font-size:28px;font-weight:800;color:#FF4D1C;letter-spacing:-1px">
-            tomato<span style="color:rgba(255,77,28,0.35)">.</span>
+            zestify<span style="color:rgba(255,77,28,0.35)">.</span>
           </h1>
         </div>
 
@@ -160,7 +160,7 @@ export const sendOtpEmail = async (
 
         <!-- Footer -->
         <div style="padding:20px 32px;border-top:1px solid #2a2a2a;text-align:center">
-          <p style="margin:0;font-size:11px;color:#444">© 2025 Tomato. Food delivery, redefined.</p>
+          <p style="margin:0;font-size:11px;color:#444">© 2025 Zestify. Food delivery, redefined.</p>
         </div>
       </div>
     </body>
@@ -168,7 +168,7 @@ export const sendOtpEmail = async (
   `;
 
   await transporter.sendMail({
-    from: `"Tomato 🍅" <${process.env.GMAIL_USER}>`,
+    from: `"Zestify" <${process.env.GMAIL_USER}>`,
     to,
     subject: `🚀 Your order is on the way! OTP: ${otp}`,
     html,

@@ -83,16 +83,17 @@ const Navbar = () => {
         <Link
           to="/"
           style={{
-            fontSize: 22,
+            fontSize: 26,
             fontWeight: 800,
             color: "#FF4D1C",
             textDecoration: "none",
             letterSpacing: "-0.5px",
             flexShrink: 0,
+            lineHeight: 1,
           }}
         >
-          tomato
-          <span style={{ color: "rgba(255,77,28,0.4)", fontSize: 26 }}>.</span>
+          zestify
+          <span style={{ color: "rgba(255,77,28,0.4)", fontSize: 30 }}>.</span>
         </Link>
 
         {/* Search — only on home */}
@@ -300,7 +301,7 @@ const Navbar = () => {
                   "rgba(255,255,255,0.08)";
               }}
             >
-              {/* Avatar — photo থাকলে photo, না থাকলে initials */}
+              {/* Avatar: show profile photo if available, otherwise display initials */}
               {showImage ? (
                 <img
                   src={user!.image}

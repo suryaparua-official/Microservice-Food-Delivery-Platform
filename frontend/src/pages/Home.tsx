@@ -74,7 +74,7 @@ const Home = () => {
             longitude: location.longitude,
             search,
           },
-          // token থাকলে পাঠাও, না থাকলে header ছাড়াই call করো
+          // Include auth header if token is present, otherwise call without it
           ...(token && {
             headers: { Authorization: `Bearer ${token}` },
           }),

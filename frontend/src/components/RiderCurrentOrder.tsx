@@ -412,7 +412,7 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
           </button>
         )}
 
-        {/* OTP verify — picked_up হলে */}
+        {/* OTP verification — shown when order status is picked_up */}
         {order.status === "picked_up" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <p style={{ fontSize: 13, color: "#555", textAlign: "center" }}>

@@ -2,7 +2,7 @@ import { describe, it, expect, jest, beforeAll, afterAll } from "@jest/globals";
 
 // Mock mongoose
 jest.mock("mongoose", () => ({
-  connect: jest.fn().mockResolvedValue({}),
+  connect: jest.fn<() => Promise<unknown>>().mockResolvedValue({}),
   model: jest.fn(),
   Schema: jest.fn().mockImplementation(() => ({
     index: jest.fn(),
@@ -11,7 +11,7 @@ jest.mock("mongoose", () => ({
 
 // Mock Redis
 jest.mock("../config/redis.js", () => ({
-  connectRedis: jest.fn().mockResolvedValue({}),
+  connectRedis: jest.fn<() => Promise<unknown>>().mockResolvedValue({}),
   default: {
     isOpen: true,
     get: jest.fn(),

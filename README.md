@@ -38,7 +38,7 @@ A complete technical report covering architecture, system design, infrastructure
 
 ## 🌟 Overview
 
-Tomato is a full-stack food delivery platform similar to Swiggy/Zomato. It supports three types of users:
+Zestify is a full-stack food delivery platform similar to Swiggy/Zomato. It supports three types of users:
 
 | Role                          | Capabilities                                                                                  |
 | ----------------------------- | --------------------------------------------------------------------------------------------- |

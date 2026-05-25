@@ -48,7 +48,7 @@ const Login = () => {
       const user = result.data.user;
       localStorage.setItem("token", token);
 
-      // Seller / Rider / Admin — block করো
+      // Block seller, rider, and admin roles from customer login
       if (user.role && BLOCKED_ROLES.includes(user.role)) {
         setBlockedRole(user.role);
         localStorage.removeItem("token");
@@ -56,7 +56,7 @@ const Login = () => {
         return;
       }
 
-      // Customer বা no role — customer করে দাও
+      // Customer or no role — assign customer role
       if (!user.role) {
         const roleRes = await axios.put(
           `${authService}/api/auth/add/role`,
@@ -150,7 +150,7 @@ const Login = () => {
               marginBottom: 8,
             }}
           >
-            tomato
+            zestify
             <span style={{ color: "rgba(255,77,28,0.35)", fontSize: 44 }}>
               .
             </span>

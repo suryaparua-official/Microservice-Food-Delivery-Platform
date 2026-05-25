@@ -157,7 +157,7 @@ const Partner = () => {
             letterSpacing: "-0.5px",
           }}
         >
-          tomato
+          zestify
           <span style={{ color: "rgba(255,77,28,0.4)", fontSize: 26 }}>.</span>
         </a>
         <a
@@ -219,7 +219,7 @@ const Partner = () => {
           >
             Grow your business
             <br />
-            <span style={{ color: "#FF4D1C" }}>with tomato.</span>
+            <span style={{ color: "#FF4D1C" }}>with zestify.</span>
           </h1>
           <p
             style={{

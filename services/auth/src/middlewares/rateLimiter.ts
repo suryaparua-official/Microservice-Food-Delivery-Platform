@@ -1,6 +1,6 @@
 import rateLimit from "express-rate-limit";
 
-// Global — সব routes-এ
+// Global rate limiter — applied to all routes
 export const globalLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100,

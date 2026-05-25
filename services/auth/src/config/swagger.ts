@@ -4,7 +4,7 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Tomato Auth Service API",
+      title: "Zestify Auth Service API",
       version: "1.0.0",
       description: "Authentication & User Management API",
     },
@@ -23,4 +23,3 @@ const options: swaggerJsdoc.Options = {
 };
 
 export const swaggerSpec = swaggerJsdoc(options);
-sss;

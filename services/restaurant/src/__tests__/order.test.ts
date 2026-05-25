@@ -68,7 +68,7 @@ describe("Order Business Logic", () => {
     });
 
     it("online order should have pending status initially", () => {
-      const paymentMethod = "razorpay";
+      const paymentMethod: string = "razorpay";
       const paymentStatus = paymentMethod === "cod" ? "cod_pending" : "pending";
       expect(paymentStatus).toBe("pending");
     });
@@ -81,7 +81,7 @@ describe("Order Business Logic", () => {
     });
 
     it("online cancelled order should get refund_pending", () => {
-      const paymentMethod = "razorpay";
+      const paymentMethod: string = "razorpay";
       const paymentStatus =
         paymentMethod === "cod" ? "failed" : "refund_pending";
       expect(paymentStatus).toBe("refund_pending");

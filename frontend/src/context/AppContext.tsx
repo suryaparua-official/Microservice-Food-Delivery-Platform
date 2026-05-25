@@ -95,7 +95,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=en`,
         );
         const data = await res.json();
 
