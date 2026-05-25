@@ -235,6 +235,12 @@ export const fetchRestaurantOrders = TryCatch(
     if (!restaurantId)
       return res.status(400).json({ message: "Restaurant id is required" });
 
+    if (user.restaurantId !== restaurantId) {
+      return res.status(403).json({
+        message: "You are not authorized to view these orders",
+      });
+    }
+
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;

@@ -22,11 +22,13 @@
     "dotenv": "^17.2.4",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.3",
     "kafkajs": "^2.2.4",
     "mongoose": "^9.1.6",
     "multer": "^2.0.2",
     "opossum": "^9.0.0",
+    "rate-limit-redis": "^5.0.0",
     "redis": "^5.12.1",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1"

@@ -76,9 +76,13 @@ export const startPaymentConsumer = async () => {
       }
 
       channel.ack(msg);
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Payment consumer error:", error);
-      channel.nack(msg, false, true); // requeue = true
+      if (error instanceof SyntaxError || error?.name === "ValidationError") {
+        channel.nack(msg, false, false); // discard poison pill
+      } else {
+        channel.nack(msg, false, true); // requeue for retry
+      }
     }
   });
 };

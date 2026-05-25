@@ -232,8 +232,8 @@ describe("Order Business Logic", () => {
       }
 
       await Promise.all([
-        MockMenuItem.find({ _id: { $in: itemIds } }),
-        MockRestaurant.findById(cartRestaurantId!).lean(),
+        MockMenuItem.find(),
+        MockRestaurant.findById().lean(),
       ]);
 
       // Key assertion: only 1 call to find, not 5 individual findById calls

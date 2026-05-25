@@ -16,13 +16,3 @@ export const createGlobalLimiter = () =>
     legacyHeaders: false,
     store: makeStore(),
   });
-
-export const createLoginLimiter = () =>
-  rateLimit({
-    windowMs: 60 * 1000,
-    max: 5,
-    message: { message: "Too many login attempts. Please wait 1 minute." },
-    standardHeaders: true,
-    legacyHeaders: false,
-    store: makeStore(),
-  });

@@ -2,12 +2,14 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import http from "http";
+import helmet from "helmet";
 import { initSocket } from "./socket.js";
 import internalRoute from "./routes/internal.js";
 
 dotenv.config();
 
 const app = express();
+app.use(helmet());
 
 app.use(
   cors({
@@ -47,4 +49,7 @@ async function startServer() {
   process.on("SIGINT", shutdown);
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error("❌ Failed to start server:", err);
+  process.exit(1);
+});

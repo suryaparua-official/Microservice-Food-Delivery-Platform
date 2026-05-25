@@ -12,9 +12,7 @@ export const redisAddToCart = async (
 ): Promise<void> => {
   const key = CART_KEY(userId);
   const field = `${itemId}:${restaurantId}`;
-  const existing = await redisClient.hGet(key, field);
-  const currentQty = existing ? parseInt(existing) : 0;
-  await redisClient.hSet(key, field, String(currentQty + 1));
+  await redisClient.hIncrBy(key, field, 1);
   await redisClient.expire(key, CART_TTL);
 };
 
@@ -39,9 +37,7 @@ export const redisIncrementItem = async (
   const fields = await redisClient.hGetAll(key);
   for (const field of Object.keys(fields)) {
     if (field.startsWith(`${itemId}:`)) {
-      const val = fields[field];
-      const qty = val ? parseInt(val) : 1;
-      await redisClient.hSet(key, field, String(qty + 1));
+      await redisClient.hIncrBy(key, field, 1);
       await redisClient.expire(key, CART_TTL);
       return true;
     }

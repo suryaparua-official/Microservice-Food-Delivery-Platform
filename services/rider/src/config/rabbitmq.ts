@@ -1,4 +1,5 @@
 import amqp from "amqplib";
+import { startOrderReadyConsumer } from "./orderReady.consumer.js";
 
 let channel: amqp.Channel;
 let isReconnecting = false;
@@ -21,9 +22,10 @@ export const connectRabbitMQ = async () => {
         console.error("RabbitMQ connection error:", err);
         if (!isReconnecting) {
           isReconnecting = true;
-          setTimeout(() => {
+          setTimeout(async () => {
             isReconnecting = false;
-            connectRabbitMQ();
+            await connectRabbitMQ();
+            startOrderReadyConsumer();
           }, 5000);
         }
       });
@@ -32,9 +34,10 @@ export const connectRabbitMQ = async () => {
         console.log("RabbitMQ connection closed, reconnecting...");
         if (!isReconnecting) {
           isReconnecting = true;
-          setTimeout(() => {
+          setTimeout(async () => {
             isReconnecting = false;
-            connectRabbitMQ();
+            await connectRabbitMQ();
+            startOrderReadyConsumer();
           }, 5000);
         }
       });

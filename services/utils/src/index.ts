@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import http from "http";
+import helmet from "helmet";
 import cloudinary from "cloudinary";
 import cors from "cors";
 import uploadRoutes from "./routes/cloudinary.js";
@@ -14,6 +15,7 @@ import { startKafkaConsumer } from "./config/kafka.consumer.js";
 dotenv.config();
 
 const app = express();
+app.use(helmet());
 
 app.use(
   cors({
@@ -80,4 +82,7 @@ async function startServer() {
   process.on("SIGINT", shutdown);
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error("❌ Failed to start server:", err);
+  process.exit(1);
+});

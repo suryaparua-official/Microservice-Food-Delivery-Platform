@@ -23,9 +23,9 @@ const auditLogs: AuditLog[] = [];
 const MAX_IN_MEMORY = 100;
 const LOG_FILE = path.join(process.cwd(), "audit.log");
 
-const appendToFile = (log: AuditLog) => {
+const appendToFile = async (log: AuditLog) => {
   try {
-    fs.appendFileSync(LOG_FILE, JSON.stringify(log) + "\n");
+    await fs.promises.appendFile(LOG_FILE, JSON.stringify(log) + "\n");
   } catch (err) {
     console.error("[AUDIT] Failed to write to audit.log:", err);
   }
@@ -47,7 +47,7 @@ export const startKafkaConsumer = async (): Promise<void> => {
       );
 
       // Persist all events to file
-      appendToFile(log);
+      await appendToFile(log);
 
       // Keep last MAX_IN_MEMORY entries in memory for API access
       auditLogs.unshift(log);

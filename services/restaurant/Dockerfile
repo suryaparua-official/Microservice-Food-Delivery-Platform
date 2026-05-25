@@ -2,6 +2,8 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+RUN apk add --no-cache openssl
+
 COPY package*.json ./
 RUN npm install --prefer-offline --no-audit --no-fund
 
@@ -16,6 +18,8 @@ RUN npm run build
 FROM node:22-alpine
 
 WORKDIR /app
+
+RUN apk add --no-cache openssl
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nodeapp -u 1001
 

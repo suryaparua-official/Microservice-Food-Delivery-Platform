@@ -85,8 +85,8 @@ export const logoutUser = TryCatch(async (req: AuthenticatedRequest, res) => {
 });
 
 export const myProfile = TryCatch(async (req: AuthenticatedRequest, res) => {
-  const user = req.user;
-  res.json(user);
+  const { tokenVersion, ...safeUser } = req.user!.toObject();
+  res.json(safeUser);
 });
 
 export const getUserById = TryCatch(async (req, res) => {
