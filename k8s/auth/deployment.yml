@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: auth
-          image: surya850/swiggy-auth:4f3287e2ccb6fcdc64ccb3124e4700f96ef72380
+          image: surya850/swiggy-auth:a44c7a4d26e7651601285a8961420dfd92cd4cb7
           ports:
             - containerPort: 5000
           env:
