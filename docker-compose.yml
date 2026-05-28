@@ -115,7 +115,7 @@ services:
     environment:
       - PORT=5000
       - NODE_ENV=development
-      - MONGO_URI=mongodb://mongodb:27017/tomato_auth
+      - MONGO_URI=mongodb://mongodb:27017/zestify_auth
       - JWT_SEC=${JWT_SEC}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
@@ -142,7 +142,7 @@ services:
     environment:
       - PORT=5001
       - NODE_ENV=development
-      - MONGO_URI=mongodb://mongodb:27017/tomato_restaurant
+      - MONGO_URI=mongodb://mongodb:27017/zestify_restaurant
       - JWT_SEC=${JWT_SEC}
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
       - INTERNAL_SERVICE_KEY=${INTERNAL_SERVICE_KEY}
@@ -239,7 +239,7 @@ services:
     environment:
       - PORT=5005
       - NODE_ENV=development
-      - MONGO_URI=mongodb://mongodb:27017/tomato_rider
+      - MONGO_URI=mongodb://mongodb:27017/zestify_rider
       - JWT_SEC=${JWT_SEC}
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
       - INTERNAL_SERVICE_KEY=${INTERNAL_SERVICE_KEY}
@@ -272,7 +272,7 @@ services:
     environment:
       - PORT=5006
       - NODE_ENV=development
-      - MONGO_URI=mongodb://mongodb:27017/tomato_admin
+      - MONGO_URI=mongodb://mongodb:27017/zestify_admin
       - DB_NAME=Zomato_Clone
       - JWT_SEC=${JWT_SEC}
       - INTERNAL_SERVICE_KEY=${INTERNAL_SERVICE_KEY}
