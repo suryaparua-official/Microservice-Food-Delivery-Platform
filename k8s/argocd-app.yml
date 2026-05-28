@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/suryaparua-official/Swiggy.git
+    repoURL: https://github.com/suryaparua-official/Microservice-Food-Delivery-Platform.git
     targetRevision: main
     path: k8s
     directory:
