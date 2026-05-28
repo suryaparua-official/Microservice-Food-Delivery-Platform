@@ -68,7 +68,7 @@ jobs:
           context: ${{ matrix.context }}
           push: false
           load: true
-          tags: ${{ env.DOCKERHUB_USERNAME }}/swiggy-${{ matrix.service }}:${{ github.sha }}
+          tags: ${{ env.DOCKERHUB_USERNAME }}/zestify-${{ matrix.service }}:${{ github.sha }}
           build-args: |
             VITE_AUTH_URL=${{ secrets.VITE_AUTH_URL }}
             VITE_RESTAURANT_URL=${{ secrets.VITE_RESTAURANT_URL }}
@@ -85,7 +85,7 @@ jobs:
       - name: Trivy image vulnerability scan
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.DOCKERHUB_USERNAME }}/swiggy-${{ matrix.service }}:${{ github.sha }}
+          image-ref: ${{ env.DOCKERHUB_USERNAME }}/zestify-${{ matrix.service }}:${{ github.sha }}
           format: table
           exit-code: 1
           severity: CRITICAL
@@ -98,8 +98,8 @@ jobs:
           context: ${{ matrix.context }}
           push: true
           tags: |
-            ${{ env.DOCKERHUB_USERNAME }}/swiggy-${{ matrix.service }}:latest
-            ${{ env.DOCKERHUB_USERNAME }}/swiggy-${{ matrix.service }}:${{ github.sha }}
+            ${{ env.DOCKERHUB_USERNAME }}/zestify-${{ matrix.service }}:latest
+            ${{ env.DOCKERHUB_USERNAME }}/zestify-${{ matrix.service }}:${{ github.sha }}
           build-args: |
             VITE_AUTH_URL=${{ secrets.VITE_AUTH_URL }}
             VITE_RESTAURANT_URL=${{ secrets.VITE_RESTAURANT_URL }}

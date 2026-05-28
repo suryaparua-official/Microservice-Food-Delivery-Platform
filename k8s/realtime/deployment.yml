@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: realtime-service
-  namespace: swiggy
+  namespace: zestify
 spec:
   replicas: 1
   selector:
@@ -24,18 +24,23 @@ spec:
             - name: NODE_ENV
               valueFrom:
                 configMapKeyRef:
-                  name: swiggy-config
+                  name: zestify-config
                   key: NODE_ENV
             - name: JWT_SEC
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: JWT_SEC
             - name: INTERNAL_SERVICE_KEY
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: INTERNAL_SERVICE_KEY
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: zestify-secrets
+                  key: REDIS_URL
           resources:
             requests:
               memory: "128Mi"

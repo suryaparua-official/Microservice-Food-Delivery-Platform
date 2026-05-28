@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: swiggy-app
+  name: zestify
   namespace: argocd
 spec:
   project: default
@@ -13,7 +13,7 @@ spec:
       recurse: true
   destination:
     server: https://kubernetes.default.svc
-    namespace: swiggy
+    namespace: zestify
   syncPolicy:
     automated:
       prune: true

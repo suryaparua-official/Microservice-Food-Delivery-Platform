@@ -25,7 +25,7 @@ jobs:
           SHA=${{ github.event.workflow_run.head_sha }}
           SERVICES="auth restaurant utils realtime rider admin frontend"
           for svc in $SERVICES; do
-            sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/swiggy-${svc}:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/swiggy-${svc}:${SHA}|g" \
+            sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/zestify-${svc}:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/zestify-${svc}:${SHA}|g" \
               k8s/${svc}/deployment.yml
           done
 
@@ -37,38 +37,38 @@ jobs:
           git diff --staged --quiet || git commit -m "ci: update image tags to ${{ github.event.workflow_run.head_sha }}"
           git push
 
-  authenticate-gcp:
-    name: Authenticate to GCP and create K8s secrets
+  deploy-eks:
+    name: Authenticate to AWS and create K8s secrets
     runs-on: ubuntu-latest
     needs: update-manifests
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     permissions:
-      id-token: write
       contents: read
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Authenticate to GCP via Workload Identity Federation
-        uses: google-github-actions/auth@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_SA_EMAIL }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Get GKE credentials
-        uses: google-github-actions/get-gke-credentials@v2
-        with:
-          cluster_name: ${{ secrets.GKE_CLUSTER_NAME }}
-          location: ${{ secrets.GKE_CLUSTER_LOCATION }}
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ secrets.EKS_CLUSTER_NAME }} \
+            --region ${{ secrets.AWS_REGION }}
 
       - name: Create namespace if not exists
         run: kubectl apply -f k8s/namespace.yml
 
       - name: Create or update K8s secrets from GitHub Secrets
         run: |
-          kubectl create secret generic swiggy-secrets \
-            --namespace swiggy \
+          kubectl create secret generic zestify-secrets \
+            --namespace zestify \
             --from-literal=MONGO_URI="${{ secrets.MONGO_URI }}" \
             --from-literal=JWT_SEC="${{ secrets.JWT_SEC }}" \
             --from-literal=INTERNAL_SERVICE_KEY="${{ secrets.INTERNAL_SERVICE_KEY }}" \
@@ -82,4 +82,24 @@ jobs:
             --from-literal=STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
             --from-literal=STRIPE_PUBLISHABLE_KEY="${{ secrets.STRIPE_PUBLISHABLE_KEY }}" \
             --from-literal=RABBITMQ_URL="${{ secrets.RABBITMQ_URL }}" \
+            --from-literal=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --from-literal=REDIS_URL="${{ secrets.REDIS_URL }}" \
+            --from-literal=KAFKA_BROKER="${{ secrets.KAFKA_BROKER }}" \
+            --from-literal=GMAIL_USER="${{ secrets.GMAIL_USER }}" \
+            --from-literal=GMAIL_PASS="${{ secrets.GMAIL_PASS }}" \
             --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o argocd \
+            https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd
+          sudo mv argocd /usr/local/bin/
+
+      - name: Sync ArgoCD application
+        run: |
+          argocd app sync zestify \
+            --server ${{ secrets.ARGOCD_SERVER }} \
+            --auth-token ${{ secrets.ARGOCD_TOKEN }} \
+            --insecure \
+            --force

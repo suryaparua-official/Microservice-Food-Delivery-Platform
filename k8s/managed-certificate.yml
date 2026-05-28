@@ -1,8 +1,0 @@
-apiVersion: networking.gke.io/v1
-kind: ManagedCertificate
-metadata:
-  name: swiggy-cert
-  namespace: swiggy
-spec:
-  domains:
-    - swiggy-surya.duckdns.org

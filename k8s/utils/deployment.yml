@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: utils-service
-  namespace: swiggy
+  namespace: zestify
 spec:
   replicas: 1
   selector:
@@ -24,67 +24,92 @@ spec:
             - name: NODE_ENV
               valueFrom:
                 configMapKeyRef:
-                  name: swiggy-config
+                  name: zestify-config
                   key: NODE_ENV
             - name: JWT_SEC
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: JWT_SEC
             - name: INTERNAL_SERVICE_KEY
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: INTERNAL_SERVICE_KEY
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: zestify-secrets
+                  key: REDIS_URL
             - name: RABBITMQ_URL
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: RABBITMQ_URL
+            - name: KAFKA_BROKER
+              valueFrom:
+                configMapKeyRef:
+                  name: zestify-config
+                  key: KAFKA_BROKER
             - name: CLOUD_NAME
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: CLOUD_NAME
             - name: CLOUD_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: CLOUD_API_KEY
             - name: CLOUD_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: CLOUD_SECRET_KEY
             - name: RAZORPAY_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: RAZORPAY_KEY_ID
             - name: RAZORPAY_KEY_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: RAZORPAY_KEY_SECRET
             - name: STRIPE_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: STRIPE_SECRET_KEY
+            - name: STRIPE_PUBLISHABLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zestify-secrets
+                  key: STRIPE_PUBLISHABLE_KEY
+            - name: GMAIL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: zestify-secrets
+                  key: GMAIL_USER
+            - name: GMAIL_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: zestify-secrets
+                  key: GMAIL_PASS
             - name: RESTAURANT_SERVICE
               valueFrom:
                 configMapKeyRef:
-                  name: swiggy-config
+                  name: zestify-config
                   key: RESTAURANT_SERVICE
             - name: FRONTEND_URL
               valueFrom:
                 configMapKeyRef:
-                  name: swiggy-config
+                  name: zestify-config
                   key: FRONTEND_URL
             - name: PAYMENT_QUEUE
               valueFrom:
                 configMapKeyRef:
-                  name: swiggy-config
+                  name: zestify-config
                   key: PAYMENT_QUEUE
           resources:
             requests:

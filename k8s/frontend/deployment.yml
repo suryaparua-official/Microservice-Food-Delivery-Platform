@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend-service
-  namespace: swiggy
+  namespace: zestify
 spec:
   replicas: 1
   selector:

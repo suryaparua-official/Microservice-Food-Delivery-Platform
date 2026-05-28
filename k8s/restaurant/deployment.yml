@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: restaurant-service
-  namespace: swiggy
+  namespace: zestify
 spec:
   replicas: 1
   selector:
@@ -24,52 +24,67 @@ spec:
             - name: NODE_ENV
               valueFrom:
                 configMapKeyRef:
-                  name: swiggy-config
+                  name: zestify-config
                   key: NODE_ENV
             - name: JWT_SEC
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: JWT_SEC
             - name: INTERNAL_SERVICE_KEY
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: INTERNAL_SERVICE_KEY
             - name: MONGO_URI
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: MONGO_URI
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: zestify-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: zestify-secrets
+                  key: REDIS_URL
             - name: RABBITMQ_URL
               valueFrom:
                 secretKeyRef:
-                  name: swiggy-secrets
+                  name: zestify-secrets
                   key: RABBITMQ_URL
+            - name: KAFKA_BROKER
+              valueFrom:
+                configMapKeyRef:
+                  name: zestify-config
+                  key: KAFKA_BROKER
             - name: UTILS_SERVICE
               valueFrom:
                 configMapKeyRef:
-                  name: swiggy-config
+                  name: zestify-config
                   key: UTILS_SERVICE
             - name: REALTIME_SERVICE
               valueFrom:
                 configMapKeyRef:
-                  name: swiggy-config
+                  name: zestify-config
                   key: REALTIME_SERVICE
             - name: PAYMENT_QUEUE
               valueFrom:
                 configMapKeyRef:
-                  name: swiggy-config
+                  name: zestify-config
                   key: PAYMENT_QUEUE
             - name: RIDER_QUEUE
               valueFrom:
                 configMapKeyRef:
-                  name: swiggy-config
+                  name: zestify-config
                   key: RIDER_QUEUE
             - name: ORDER_READY_QUEUE
               valueFrom:
                 configMapKeyRef:
-                  name: swiggy-config
+                  name: zestify-config
                   key: ORDER_READY_QUEUE
           resources:
             requests:
