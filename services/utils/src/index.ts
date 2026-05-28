@@ -61,7 +61,7 @@ async function startServer() {
   try {
     await startKafkaConsumer();
   } catch (err) {
-    console.error("Kafka consumer connection failed (non-fatal):", err);
+    console.warn("Kafka consumer connection failed, audit logging disabled:", err);
   }
 
   const server = http.createServer(app);

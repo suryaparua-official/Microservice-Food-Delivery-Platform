@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: restaurant
-          image: surya850/swiggy-restaurant:34645a4fe6e69ec8cd00d99a198a1eaa595ac77d
+          image: surya850/zestify-restaurant:34645a4fe6e69ec8cd00d99a198a1eaa595ac77d
           ports:
             - containerPort: 5001
           env:

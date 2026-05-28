@@ -65,7 +65,7 @@ async function startServer() {
   try {
     await connectKafkaProducer();
   } catch (err) {
-    console.error("Kafka producer connection failed (non-fatal):", err);
+    console.warn("Kafka producer connection failed, audit logging disabled:", err);
   }
 
   const server = http.createServer(app);
