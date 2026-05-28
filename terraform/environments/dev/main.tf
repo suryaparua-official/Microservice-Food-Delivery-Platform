@@ -39,6 +39,17 @@ module "vpc" {
   tags                 = local.common_tags
 }
 
+# Phase 1: create EKS cluster role and node group role before the cluster exists.
+# No OIDC inputs — those are only available after the cluster is up.
+module "iam" {
+  source = "../../modules/iam"
+
+  project_name = var.project_name
+  environment  = var.environment
+  tags         = local.common_tags
+}
+
+# Phase 2: create the EKS cluster using the IAM roles from module.iam.
 module "eks" {
   source = "../../modules/eks"
 
@@ -55,16 +66,21 @@ module "eks" {
   node_disk_size      = var.node_disk_size
   tags                = local.common_tags
 
-  # IAM module must exist before EKS so the cluster and node roles are ready
   depends_on = [module.iam]
 }
 
-module "iam" {
+# Phase 3: create the ALB controller IRSA role using the OIDC provider that
+# is only available after the EKS cluster (and its OIDC provider) are created.
+# create_base_roles = false prevents duplicate cluster/node role names.
+module "iam_alb" {
   source = "../../modules/iam"
 
   project_name      = var.project_name
   environment       = var.environment
+  create_base_roles = false
   oidc_provider_arn = module.eks.oidc_provider_arn
   oidc_provider_url = module.eks.oidc_provider_url
   tags              = local.common_tags
+
+  depends_on = [module.eks]
 }

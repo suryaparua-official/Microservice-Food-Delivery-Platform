@@ -10,8 +10,7 @@ metadata:
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
 spec:
   rules:
-    - host: zestify.duckdns.org
-      http:
+    - http:
         paths:
           - path: /api/auth
             pathType: Prefix

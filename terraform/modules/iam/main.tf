@@ -1,4 +1,6 @@
 data "aws_iam_policy_document" "eks_cluster_assume_role" {
+  count = var.create_base_roles ? 1 : 0
+
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRole"]
@@ -11,18 +13,24 @@ data "aws_iam_policy_document" "eks_cluster_assume_role" {
 }
 
 resource "aws_iam_role" "eks_cluster" {
+  count = var.create_base_roles ? 1 : 0
+
   name               = "${var.project_name}-${var.environment}-eks-cluster-role"
-  assume_role_policy = data.aws_iam_policy_document.eks_cluster_assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.eks_cluster_assume_role[0].json
 
   tags = var.tags
 }
 
 resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
-  role       = aws_iam_role.eks_cluster.name
+  count = var.create_base_roles ? 1 : 0
+
+  role       = aws_iam_role.eks_cluster[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
 data "aws_iam_policy_document" "eks_node_assume_role" {
+  count = var.create_base_roles ? 1 : 0
+
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRole"]
@@ -35,28 +43,37 @@ data "aws_iam_policy_document" "eks_node_assume_role" {
 }
 
 resource "aws_iam_role" "eks_node_group" {
+  count = var.create_base_roles ? 1 : 0
+
   name               = "${var.project_name}-${var.environment}-eks-node-role"
-  assume_role_policy = data.aws_iam_policy_document.eks_node_assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.eks_node_assume_role[0].json
 
   tags = var.tags
 }
 
 resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
-  role       = aws_iam_role.eks_node_group.name
+  count = var.create_base_roles ? 1 : 0
+
+  role       = aws_iam_role.eks_node_group[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
-  role       = aws_iam_role.eks_node_group.name
+  count = var.create_base_roles ? 1 : 0
+
+  role       = aws_iam_role.eks_node_group[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
 resource "aws_iam_role_policy_attachment" "eks_ecr_read_only" {
-  role       = aws_iam_role.eks_node_group.name
+  count = var.create_base_roles ? 1 : 0
+
+  role       = aws_iam_role.eks_node_group[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
-# Full ALB management permissions required by the AWS Load Balancer Controller
+# Full ALB management permissions required by the AWS Load Balancer Controller.
+# This data source has no count — it is a local computation and safe to evaluate always.
 data "aws_iam_policy_document" "alb_controller" {
   statement {
     effect    = "Allow"
@@ -313,6 +330,8 @@ data "aws_iam_policy_document" "alb_controller" {
 }
 
 resource "aws_iam_policy" "alb_controller" {
+  count = var.oidc_provider_arn != null ? 1 : 0
+
   name        = "${var.project_name}-${var.environment}-alb-controller-policy"
   description = "IAM policy for the AWS Load Balancer Controller"
   policy      = data.aws_iam_policy_document.alb_controller.json
@@ -322,6 +341,8 @@ resource "aws_iam_policy" "alb_controller" {
 
 # IRSA trust policy: restricts assumption to the ALB controller service account only
 data "aws_iam_policy_document" "alb_controller_assume_role" {
+  count = var.oidc_provider_arn != null ? 1 : 0
+
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -346,13 +367,17 @@ data "aws_iam_policy_document" "alb_controller_assume_role" {
 }
 
 resource "aws_iam_role" "alb_controller" {
+  count = var.oidc_provider_arn != null ? 1 : 0
+
   name               = "${var.project_name}-${var.environment}-alb-controller-role"
-  assume_role_policy = data.aws_iam_policy_document.alb_controller_assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.alb_controller_assume_role[0].json
 
   tags = var.tags
 }
 
 resource "aws_iam_role_policy_attachment" "alb_controller" {
-  role       = aws_iam_role.alb_controller.name
-  policy_arn = aws_iam_policy.alb_controller.arn
+  count = var.oidc_provider_arn != null ? 1 : 0
+
+  role       = aws_iam_role.alb_controller[0].name
+  policy_arn = aws_iam_policy.alb_controller[0].arn
 }

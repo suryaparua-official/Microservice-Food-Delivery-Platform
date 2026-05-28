@@ -46,5 +46,5 @@ output "eks_node_group_role_arn" {
 
 output "alb_controller_role_arn" {
   description = "ARN of the ALB controller IRSA role"
-  value       = module.iam.alb_controller_role_arn
+  value       = module.iam_alb.alb_controller_role_arn
 }

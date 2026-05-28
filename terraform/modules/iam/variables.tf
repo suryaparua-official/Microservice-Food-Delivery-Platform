@@ -8,14 +8,22 @@ variable "environment" {
   type        = string
 }
 
+variable "create_base_roles" {
+  description = "Set to false in secondary module calls to skip creating EKS cluster and node group roles that already exist from a prior module call"
+  type        = bool
+  default     = true
+}
+
 variable "oidc_provider_arn" {
-  description = "ARN of the EKS OIDC provider, required for IRSA role binding"
+  description = "ARN of the EKS OIDC provider for IRSA (optional, set after EKS is created)"
   type        = string
+  default     = null
 }
 
 variable "oidc_provider_url" {
-  description = "URL of the EKS OIDC provider (without https://), used as the IAM condition key prefix"
+  description = "URL of the EKS OIDC provider for IRSA (optional, set after EKS is created)"
   type        = string
+  default     = null
 }
 
 variable "tags" {

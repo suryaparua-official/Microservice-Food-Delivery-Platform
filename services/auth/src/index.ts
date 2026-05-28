@@ -25,7 +25,6 @@ async function startServer() {
   app.use(
     cors({
       origin: [
-        "https://swiggy-surya.duckdns.org",
         "http://localhost:5173",
         "http://localhost:3000",
       ],
