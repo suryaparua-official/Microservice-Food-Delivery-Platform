@@ -1,7 +1,7 @@
 import { Kafka, Producer } from "kafkajs";
 
 const kafka = new Kafka({
-  clientId: "tomato-restaurant",
+  clientId: "zestify-restaurant",
   brokers: [process.env.KAFKA_BROKER || "kafka:9092"],
 });
 

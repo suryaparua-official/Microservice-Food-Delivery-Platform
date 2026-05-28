@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 
 const kafka = new Kafka({
-  clientId: "tomato-audit",
+  clientId: "zestify-audit",
   brokers: [process.env.KAFKA_BROKER || "kafka:9092"],
 });
 

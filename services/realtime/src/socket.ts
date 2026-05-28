@@ -5,7 +5,6 @@ import jwt from "jsonwebtoken";
 let io: Server;
 
 const ALLOWED_ORIGINS = [
-  "https://swiggy-surya.duckdns.org",
   "http://localhost:5173",
   "http://localhost:3000",
 ];
