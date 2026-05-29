@@ -37,30 +37,30 @@ jobs:
           git diff --staged --quiet || git commit -m "ci: update image tags to ${{ github.event.workflow_run.head_sha }}"
           git push
 
-  deploy-eks:
-    name: Authenticate to AWS and create K8s secrets
+  authenticate-gcp:
+    name: Authenticate to GCP and create K8s secrets
     runs-on: ubuntu-latest
     needs: update-manifests
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     permissions:
+      id-token: write
       contents: read
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure GCP credentials
+        uses: google-github-actions/auth@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
-      - name: Update kubeconfig for EKS
-        run: |
-          aws eks update-kubeconfig \
-            --name ${{ secrets.EKS_CLUSTER_NAME }} \
-            --region ${{ secrets.AWS_REGION }}
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ secrets.GKE_CLUSTER_NAME }}
+          location: ${{ secrets.GKE_CLUSTER_LOCATION }}
 
       - name: Create namespace if not exists
         run: kubectl apply -f k8s/namespace.yml
