@@ -8,7 +8,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: forntend-service
+    name: frontend-service
 
   minReplicas: 2
   maxReplicas: 10

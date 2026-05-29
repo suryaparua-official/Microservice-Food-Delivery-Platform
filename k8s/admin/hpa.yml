@@ -1,7 +1,7 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: adim-hpa
+  name: admin-hpa
   namespace: zestify
 
 spec:
