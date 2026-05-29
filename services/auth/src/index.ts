@@ -16,7 +16,11 @@ import { swaggerSpec } from "./config/swagger.js";
 dotenv.config();
 
 const app = express();
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  }),
+);
 app.set("trust proxy", 1);
 
 const PORT = process.env.PORT || 5000;
