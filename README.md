@@ -1,22 +1,4 @@
-<div align="center">
-
-# Zestify
-
-**A production-grade, cloud-native food delivery platform built on microservices architecture**
-
-[![CI](https://img.shields.io/github/actions/workflow/status/suryaparua-official/Microservice-Food-Delivery-Platform/ci.yml?branch=main&label=CI&logo=github-actions&logoColor=white)](https://github.com/suryaparua-official/Microservice-Food-Delivery-Platform/actions)
-[![CD](https://img.shields.io/github/actions/workflow/status/suryaparua-official/Microservice-Food-Delivery-Platform/cd.yml?branch=main&label=CD&logo=github-actions&logoColor=white)](https://github.com/suryaparua-official/Microservice-Food-Delivery-Platform/actions)
-[![ArgoCD](https://img.shields.io/badge/GitOps-ArgoCD-orange?logo=argo&logoColor=white)](https://argoproj.github.io/cd/)
-[![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io)
-[![GKE](https://img.shields.io/badge/Cloud-GKE-4285F4?logo=google-cloud&logoColor=white)](https://cloud.google.com/kubernetes-engine)
-[![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?logo=terraform&logoColor=white)](https://www.terraform.io)
-[![Docker](https://img.shields.io/badge/Container-Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com)
-[![TypeScript](https://img.shields.io/badge/Language-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![License](https://img.shields.io/github/license/suryaparua-official/Microservice-Food-Delivery-Platform)](LICENSE.md)
-
-**[Live Demo](https://zestify-surya.duckdns.org)**
-
-</div>
+# Zestify: A production-grade, cloud-native food delivery platform built on microservices architecture.
 
 ---
 
@@ -33,7 +15,6 @@
 - [Security](#security)
 - [Autoscaling](#autoscaling)
 - [Load Testing](#load-testing)
-- [Screenshots](#screenshots)
 - [Local Development](#local-development)
 - [Environment Variables](#environment-variables)
 - [Deployment Guide](#deployment-guide)
@@ -65,24 +46,24 @@ The platform enables customers to browse nearby restaurants, place orders with r
                           ┌─────────────────────────────────────────────────────┐
                           │              Internet / Client Browser               │
                           └─────────────────────┬───────────────────────────────┘
-                                                 │ HTTPS (443)
-                                                 │
+                                                │ HTTPS (443)
+                                                │
                           ┌─────────────────────▼───────────────────────────────┐
                           │         NGINX Ingress Controller (GKE)              │
                           │         zestify-surya.duckdns.org                   │
                           │         TLS: Let's Encrypt (cert-manager)           │
-                          └──┬──────────┬────────┬───────┬────────┬──────────┬──┘
-                             │          │        │       │        │          │
-                   /api/auth  │  /api/   │  /api/ │  /    │ /sock  │ /api/   │
-                             │ restaurant│ payment│       │  et.io │  rider  │
-                             ▼          ▼        ▼       ▼        ▼         ▼
+                          └───┬──────────┬────────┬───────┬────────┬──────────┬──┘
+                              │          │        │       │        │          │
+                   /api/auth  │  /api/   │  /api/ │  /    │ /sock  │ /api/    │
+                              │restaurant│ payment│       │  et.io │  rider   │
+                              ▼          ▼        ▼       ▼        ▼          ▼
                     ┌──────────┐ ┌──────────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐
                     │  Auth    │ │Restaurant│ │Utils │ │Front │ │Real  │ │Rider │
                     │ :5000    │ │  :5001   │ │:5002 │ │ end  │ │ time │ │:5005 │
                     └────┬─────┘ └────┬─────┘ └──┬───┘ └──────┘ │:5004 │ └──────┘
-                         │            │           │               └──────┘
+                         │            │          │              └──────┘
                     ┌────▼────┐  ┌────▼────┐  ┌──▼──────┐              ┌──────────┐
-                    │ MongoDB │  │ MongoDB │  │Cloudinary│              │  Admin   │
+                    │ MongoDB │  │ MongoDB │  │Cloudinary│             │  Admin   │
                     │  Atlas  │  │  Atlas  │  │  (CDN)  │              │  :5006   │
                     └─────────┘  └────┬────┘  └─────────┘              └──────────┘
                                       │
@@ -90,7 +71,7 @@ The platform enables customers to browse nearby restaurants, place orders with r
                                │         Message Bus          │
                                │  RabbitMQ  │  Kafka          │
                                └──────┬─────┴────────┬────────┘
-                                      │               │
+                                      │              │
                                ┌──────▼──────┐  ┌────▼───────┐
                                │   Redis     │  │PostgreSQL  │
                                │  (Upstash)  │  │  (Prisma)  │
@@ -497,47 +478,37 @@ hey -n 10000 -c 100 https://zestify-surya.duckdns.org/
 
 ### Application Homepage
 
-![Application Homepage](docs/screenshots/homepage.png)
-
-### GKE Cluster Dashboard
-
-![GKE Cluster](docs/screenshots/gke-cluster.png)
+![alt text](<Screenshot 2026-05-29 224753.png>)
 
 ### ArgoCD Synced Application
 
-![ArgoCD Sync Status](docs/screenshots/argocd-synced.png)
+![alt text](<Screenshot 2026-05-29 225635.png>)
 
 ### GitHub Actions CI Success
 
-![CI Pipeline](docs/screenshots/ci-success.png)
+![alt text](image.png)
 
 ### GitHub Actions CD Success
 
-![CD Pipeline](docs/screenshots/cd-success.png)
-
-### Kubernetes Pods Running
-
-![Pods Running](docs/screenshots/pods-running.png)
+![alt text](image-1.png)
 
 ### HPA Autoscaling Output
 
-![HPA Output](docs/screenshots/hpa-output.png)
+![alt text](<Screenshot 2026-05-30 020043.png>)
 
 ### HTTPS Certificate Validation
 
 ![TLS Certificate](docs/screenshots/tls-certificate.png)
 
-### Google OAuth Login
-
-![Google OAuth](docs/screenshots/google-oauth.png)
-
 ### Load Testing Results
 
-![Load Test](docs/screenshots/load-testing.png)
+![alt text](<Screenshot 2026-05-30 020020.png>)
+![alt text](<Screenshot 2026-05-30 020026.png>)
 
-### Terraform Apply Output
+### Monitoring
 
-![Terraform Apply](docs/screenshots/terraform-apply.png)
+![alt text](<Screenshot 2026-05-29 230224.png>)
+![alt text](<Screenshot 2026-05-29 230237.png>)
 
 ---
 
