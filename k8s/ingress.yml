@@ -7,11 +7,18 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
 
+  tls:
+    - hosts:
+        - zestify-surya.duckdns.org
+      secretName: zestify-tls
+
   rules:
-    - http:
+   - host: zestify-surya.duckdns.org
+     http:
         paths:
           - path: /api/auth
             pathType: Prefix
