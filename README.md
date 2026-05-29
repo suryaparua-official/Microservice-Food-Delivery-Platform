@@ -1,4 +1,4 @@
-# Zestify: A production-grade, cloud-native food delivery platform built on microservices architecture.
+# Zestify: A production-grade, cloud-native multi-vendor food delivery platform built on microservices architecture.
 
 ---
 
@@ -44,7 +44,7 @@ The platform enables customers to browse nearby restaurants, place orders with r
 
 ```
                           ┌─────────────────────────────────────────────────────┐
-                          │              Internet / Client Browser               │
+                          │              Internet / Client Browser              │
                           └─────────────────────┬───────────────────────────────┘
                                                 │ HTTPS (443)
                                                 │
@@ -52,7 +52,7 @@ The platform enables customers to browse nearby restaurants, place orders with r
                           │         NGINX Ingress Controller (GKE)              │
                           │         zestify-surya.duckdns.org                   │
                           │         TLS: Let's Encrypt (cert-manager)           │
-                          └───┬──────────┬────────┬───────┬────────┬──────────┬──┘
+                          └───┬──────────┬────────┬───────┬────────┬──────────┬─┘
                               │          │        │       │        │          │
                    /api/auth  │  /api/   │  /api/ │  /    │ /sock  │ /api/    │
                               │restaurant│ payment│       │  et.io │  rider   │
@@ -478,37 +478,39 @@ hey -n 10000 -c 100 https://zestify-surya.duckdns.org/
 
 ### Application Homepage
 
-![alt text](<Screenshot 2026-05-29 224753.png>)
+<img width="1099" height="899" alt="Screenshot 2026-05-29 224753" src="https://github.com/user-attachments/assets/e872c54c-ba95-4d61-aa9f-008e4bd2c83f" />
 
 ### ArgoCD Synced Application
 
-![alt text](<Screenshot 2026-05-29 225635.png>)
+<img width="1900" height="881" alt="Screenshot 2026-05-29 225635" src="https://github.com/user-attachments/assets/6879811b-305b-41ef-a82b-43f6dea12b04" />
 
 ### GitHub Actions CI Success
 
-![alt text](image.png)
+<img width="1888" height="878" alt="Screenshot 2026-05-30 023325" src="https://github.com/user-attachments/assets/62ba7bc6-49e7-44bf-9c88-6847f6de9160" />
 
 ### GitHub Actions CD Success
 
-![alt text](image-1.png)
+<img width="1918" height="523" alt="Screenshot 2026-05-30 023446" src="https://github.com/user-attachments/assets/94f3d95e-d785-4e4d-8ed8-9fbac0d31134" />
+
+### Kubernetes Pods Running
+
+<img width="609" height="394" alt="Screenshot 2026-05-29 224556" src="https://github.com/user-attachments/assets/b4fab610-afc9-4a1c-97b4-b90d5a1e4863" />
 
 ### HPA Autoscaling Output
 
-![alt text](<Screenshot 2026-05-30 020043.png>)
-
-### HTTPS Certificate Validation
-
-![TLS Certificate](docs/screenshots/tls-certificate.png)
+<img width="1286" height="270" alt="Screenshot 2026-05-30 020043" src="https://github.com/user-attachments/assets/a4595f8e-d41a-4fb7-a0f4-ac83839c89f9" />
 
 ### Load Testing Results
 
-![alt text](<Screenshot 2026-05-30 020020.png>)
-![alt text](<Screenshot 2026-05-30 020026.png>)
+<img width="848" height="681" alt="Screenshot 2026-05-30 020020" src="https://github.com/user-attachments/assets/90d75e37-ebc3-447f-8bae-9805ce8c9409" />
+
+<img width="860" height="599" alt="Screenshot 2026-05-30 020026" src="https://github.com/user-attachments/assets/11636b6b-c074-45d6-a1f5-d1878562eff6" />
 
 ### Monitoring
 
-![alt text](<Screenshot 2026-05-29 230224.png>)
-![alt text](<Screenshot 2026-05-29 230237.png>)
+<img width="1919" height="855" alt="Screenshot 2026-05-29 230224" src="https://github.com/user-attachments/assets/478b0385-1905-41c4-a1bb-e143b75781c1" />
+
+<img width="1915" height="872" alt="Screenshot 2026-05-29 230237" src="https://github.com/user-attachments/assets/9b5e366a-4db1-4d11-8eb9-4c0dd59f7d43" />
 
 ---
 
