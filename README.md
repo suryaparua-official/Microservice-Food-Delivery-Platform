@@ -1,4 +1,4 @@
-# Zestify: A production-grade, cloud-native multi-vendor food delivery platform built on microservices architecture.
+# Zestify: A Production-Grade, Cloud-Native Food Delivery Platform Built On Microservices Architecture.
 
 ---
 
@@ -643,34 +643,6 @@ kubectl apply -f k8s/argocd-app.yml
 
 Push to `main`. The GitHub Actions CI/CD pipeline will build, scan, push images, update manifests, and ArgoCD will sync the cluster automatically.
 
----
-
-## Deployment Validation Checklist
-
-| Category         | Item                       | Status |
-| ---------------- | -------------------------- | ------ |
-| Infrastructure   | Terraform Provisioned      | Done   |
-| Infrastructure   | GKE Running                | Done   |
-| Infrastructure   | Node Pools Running         | Done   |
-| Containerization | Docker Images Built        | Done   |
-| Containerization | Images Pushed to DockerHub | Done   |
-| CI/CD            | GitHub Actions CI          | Done   |
-| CI/CD            | GitHub Actions CD          | Done   |
-| GitOps           | ArgoCD Synced              | Done   |
-| GitOps           | Healthy Application        | Done   |
-| Networking       | Ingress Configured         | Done   |
-| Networking       | External Load Balancer     | Done   |
-| Networking       | Domain Mapped              | Done   |
-| Security         | HTTPS Enabled              | Done   |
-| Security         | TLS Certificate Issued     | Done   |
-| Security         | Google OAuth Working       | Done   |
-| Scaling          | Metrics Server Installed   | Done   |
-| Scaling          | HPA Configured             | Done   |
-| Scaling          | Autoscaling Operational    | Done   |
-| Performance      | Load Testing Completed     | Done   |
-| Performance      | 10,000 Successful Requests | Done   |
-
----
 
 ## License
 
