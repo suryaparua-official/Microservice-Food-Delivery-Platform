@@ -1,38 +1,50 @@
 #!/bin/bash
 
-# Exit on any error
 set -e
 
-echo "Connecting to EKS cluster..."
-aws eks update-kubeconfig \
-  --name zestify-dev-cluster \
-  --region ap-south-1
+echo "Connecting to GKE cluster..."
+
+gcloud container clusters get-credentials zestify-gke \
+  --region asia-south1
 
 echo "Adding Helm repos..."
-helm repo add eks https://aws.github.io/eks-charts
+
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo add grafana https://grafana.github.io/helm-charts
+
 helm repo update
 
-echo "Installing AWS Load Balancer Controller..."
-helm upgrade --install aws-load-balancer-controller \
-  eks/aws-load-balancer-controller \
-  -n kube-system \
-  --set clusterName=zestify-dev-cluster \
+echo "Installing NGINX Ingress..."
+
+kubectl create namespace ingress-nginx \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+helm upgrade --install ingress-nginx \
+  ingress-nginx/ingress-nginx \
+  -n ingress-nginx \
   --wait
 
 echo "Installing ArgoCD..."
-kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-helm upgrade --install argocd argo/argo-cd \
+
+kubectl create namespace argocd \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+helm upgrade --install argocd \
+  argo/argo-cd \
   -n argocd \
   --wait
 
-echo "Applying ArgoCD app manifest..."
+echo "Applying ArgoCD Application..."
+
 kubectl apply -f k8s/argocd-app.yml
 
 echo "Installing Prometheus + Grafana..."
-kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl create namespace monitoring \
+  --dry-run=client -o yaml | kubectl apply -f -
+
 helm upgrade --install kube-prometheus-stack \
   prometheus-community/kube-prometheus-stack \
   -n monitoring \
@@ -40,6 +52,7 @@ helm upgrade --install kube-prometheus-stack \
   --wait
 
 echo "Installing Loki..."
+
 helm upgrade --install loki \
   grafana/loki-stack \
   -n monitoring \
@@ -47,10 +60,22 @@ helm upgrade --install loki \
   --wait
 
 echo ""
-echo "Setup complete."
+echo "======================================="
+echo "Setup Complete"
+echo "======================================="
 echo ""
-echo "Get ArgoCD initial password:"
+
+echo "ArgoCD Initial Password:"
 echo "kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
+
 echo ""
-echo "Get ArgoCD server URL:"
-echo "kubectl get svc argocd-server -n argocd"
+echo "ArgoCD Service:"
+echo "kubectl get svc -n argocd"
+
+echo ""
+echo "Grafana Service:"
+echo "kubectl get svc -n monitoring"
+
+echo ""
+echo "Grafana Admin Password:"
+echo "kubectl get secret kube-prometheus-stack-grafana -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d"
