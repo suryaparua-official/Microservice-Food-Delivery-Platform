@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: auth
-          image: surya850/zestify-auth:44239b475a9538a159f35cc1f4cf02df7993d0f3
+          image: surya850/zestify-auth:5ed9b47657e93e99620e869c577171b9a71ba92a
           ports:
             - containerPort: 5000
           env:
