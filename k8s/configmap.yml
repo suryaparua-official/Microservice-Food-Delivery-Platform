@@ -22,5 +22,5 @@ data:
   REALTIME_SERVICE: "http://realtime-service:5004"
   RIDER_SERVICE_URL: "http://rider-service:5005"
   ADMIN_SERVICE_URL: "http://admin-service:5006"
-  FRONTEND_URL: "http://frontend-service"
+  FRONTEND_URL: "https://zestify-surya.duckdns.org"
   KAFKA_BROKER: "confluent-bootstrap-url:9092"
