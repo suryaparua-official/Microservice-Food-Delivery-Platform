@@ -6,7 +6,10 @@ import helmet from "helmet";
 import authRoutes from "./routes/auth.js";
 import connectDB from "./config/db.js";
 import { connectRedis } from "./config/redis.js";
-import { createGlobalLimiter, createLoginLimiter } from "./middlewares/rateLimiter.js";
+import {
+  createGlobalLimiter,
+  createLoginLimiter,
+} from "./middlewares/rateLimiter.js";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger.js";
 
@@ -25,6 +28,7 @@ async function startServer() {
   app.use(
     cors({
       origin: [
+        "https://zestify-surya.duckdns.org",
         "http://localhost:5173",
         "http://localhost:3000",
       ],

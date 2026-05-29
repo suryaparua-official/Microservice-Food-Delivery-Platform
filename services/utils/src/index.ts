@@ -20,6 +20,7 @@ app.use(helmet());
 app.use(
   cors({
     origin: [
+      "https://zestify-surya.duckdns.org",
       "http://localhost:5173",
       "http://localhost:3000",
     ],
@@ -60,7 +61,10 @@ async function startServer() {
   try {
     await startKafkaConsumer();
   } catch (err) {
-    console.warn("Kafka consumer connection failed, audit logging disabled:", err);
+    console.warn(
+      "Kafka consumer connection failed, audit logging disabled:",
+      err,
+    );
   }
 
   const server = http.createServer(app);

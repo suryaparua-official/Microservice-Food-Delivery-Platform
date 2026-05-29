@@ -14,6 +14,7 @@ app.use(helmet());
 app.use(
   cors({
     origin: [
+      "https://zestify-surya.duckdns.org",
       "http://localhost:5173",
       "http://localhost:3000",
     ],
