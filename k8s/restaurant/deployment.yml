@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: restaurant
-          image: surya850/zestify-restaurant:1a3de767142fe376e5783383e2a7137fe7a2a7cc
+          image: surya850/zestify-restaurant:f17c40b44227af26339c7ed26631cc8102aac80c
           ports:
             - containerPort: 5001
           env:
