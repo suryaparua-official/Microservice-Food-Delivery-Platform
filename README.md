@@ -27,7 +27,6 @@ Zestify is a fully containerized food delivery platform deployed on Google Kuber
 
 The platform enables customers to browse nearby restaurants, place orders with real-time tracking, and pay through integrated payment gateways. Restaurant owners can manage their menus and order pipelines. Riders receive and fulfill delivery assignments. An admin layer governs restaurant verification and platform oversight.
 
-**Production URL:** https://zestify-surya.duckdns.org
 
 **Key deployment metrics:**
 
