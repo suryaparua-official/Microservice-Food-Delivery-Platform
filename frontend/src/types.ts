@@ -89,8 +89,7 @@ export type OrderStatus =
 
 export interface IOrder {
   id: string;
-  id: string;
-  _id: string;
+
   userId: string;
   restaurantId: string;
   restaurantName: string;
