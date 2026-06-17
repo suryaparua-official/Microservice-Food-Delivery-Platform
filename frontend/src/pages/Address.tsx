@@ -23,7 +23,7 @@ L.Icon.Default.mergeOptions({
 });
 
 interface Address {
-  _id: string;
+  id: string;
   formattedAddress: string;
   mobile: number;
 }
