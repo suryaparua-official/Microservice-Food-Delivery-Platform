@@ -51,6 +51,16 @@ spec:
                 secretKeyRef:
                   name: zestify-secrets
                   key: REDIS_URL
+            - name: RESTAURANT_SERVICE
+              valueFrom:
+                configMapKeyRef:
+                  name: zestify-config
+                  key: RESTAURANT_SERVICE
+            - name: RIDER_SERVICE
+              valueFrom:
+                configMapKeyRef:
+                  name: zestify-config
+                  key: RIDER_SERVICE_URL
           resources:
             requests:
               memory: "128Mi"

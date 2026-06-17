@@ -17,8 +17,8 @@ spec:
       secretName: zestify-tls
 
   rules:
-   - host: zestify-surya.duckdns.org
-     http:
+    - host: zestify-surya.duckdns.org
+      http:
         paths:
           - path: /api/auth
             pathType: Prefix
@@ -111,7 +111,7 @@ spec:
                 name: rider-service
                 port:
                   number: 5005
-          - path: /api/admin
+          - path: /api/v1
             pathType: Prefix
             backend:
               service:
