@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: admin
-          image: surya850/zestify-admin:00b114fd339ef44af792ae6eb36975291ace8240
+          image: surya850/zestify-admin:c6b783c1705fb2d131201b496aa99fe9e4e49fa7
           ports:
             - containerPort: 5006
           env:
