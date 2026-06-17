@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: rider
-          image: surya850/zestify-rider:243c7d0b116db21a9e67bf2dac025be76da7bf38
+          image: surya850/zestify-rider:5e75dfa6fa82e04f12fd1b3a35f0d746fb500091
           ports:
             - containerPort: 5005
           env:
