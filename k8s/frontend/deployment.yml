@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: surya850/zestify-frontend:c6b783c1705fb2d131201b496aa99fe9e4e49fa7
+          image: surya850/zestify-frontend:8b8a6d9681fd4a836e4159cd17b57baf2c151743
           ports:
             - containerPort: 80
           resources:
