@@ -88,6 +88,7 @@ export type OrderStatus =
   | "cancelled";
 
 export interface IOrder {
+  id: string;
   _id: string;
   userId: string;
   restaurantId: string;

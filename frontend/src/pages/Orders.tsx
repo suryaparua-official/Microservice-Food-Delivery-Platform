@@ -175,9 +175,9 @@ const Orders = () => {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {activeOrders.map((order) => (
               <OrderRow
-                key={order._id}
+                key={order.id}
                 order={order}
-                onClick={() => navigate(`/order/${order._id}`)}
+                onClick={() => navigate(`/order/${order.id}`)}
                 statusLabel={statusLabel}
                 statusBadgeClass={statusBadgeClass}
                 isActive
@@ -205,9 +205,9 @@ const Orders = () => {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {completedOrders.map((order) => (
               <OrderRow
-                key={order._id}
+                key={order.id}
                 order={order}
-                onClick={() => navigate(`/order/${order._id}`)}
+                onClick={() => navigate(`/order/${order.id}`)}
                 statusLabel={statusLabel}
                 statusBadgeClass={statusBadgeClass}
                 isActive={false}
@@ -278,7 +278,7 @@ const OrderRow = ({
           {order.restaurantName}
         </p>
         <p style={{ fontSize: 11, color: "#444" }}>
-          #{order._id.slice(-8).toUpperCase()}
+          #{order.id.slice(-8).toUpperCase()}
         </p>
       </div>
       <span className={statusBadgeClass[order.status] || "badge"}>
