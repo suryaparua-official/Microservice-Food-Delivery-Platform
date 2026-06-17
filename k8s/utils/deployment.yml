@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: utils
-          image: surya850/zestify-utils:8b8a6d9681fd4a836e4159cd17b57baf2c151743
+          image: surya850/zestify-utils:3e65283dd631d581a4696b338f867471ccc0e5a0
           ports:
             - containerPort: 5002
           env:
