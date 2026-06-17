@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: realtime
-          image: surya850/zestify-realtime:235c24a7a206dc9d21388ef6a2419b3daece0df4
+          image: surya850/zestify-realtime:e5984fb65274285cf7229729d95251970df30091
           ports:
             - containerPort: 5004
           env:
