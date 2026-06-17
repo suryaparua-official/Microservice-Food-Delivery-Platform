@@ -254,7 +254,7 @@ const OrderPage = () => {
               {order.restaurantName}
             </h1>
             <p style={{ fontSize: 12, color: "#444", marginTop: 4 }}>
-              Order #{order._id.slice(-8).toUpperCase()}
+              Order #{order.id.slice(-8).toUpperCase()}
             </p>
           </div>
           <div

@@ -89,7 +89,7 @@ const OrderCard = ({ order, onStatusUpdate }: Props) => {
       setLoading(true);
       setRetryVisible(false);
       await axios.put(
-        `${restaurantService}/api/order/${order._id}`,
+        `${restaurantService}/api/order/${order.id}`,
         { status },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -138,7 +138,7 @@ const OrderCard = ({ order, onStatusUpdate }: Props) => {
               marginBottom: 3,
             }}
           >
-            #{order._id.slice(-8).toUpperCase()}
+            #{order.id.slice(-8).toUpperCase()}
           </p>
           <p style={{ fontSize: 11, color: "#444" }}>
             {new Date(order.createdAt).toLocaleTimeString("en-IN", {

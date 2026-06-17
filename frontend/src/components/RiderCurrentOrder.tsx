@@ -45,7 +45,7 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
     setUpdating(true);
     try {
       await axios.put(
-        `${riderService}/api/rider/order/update/${order._id}`,
+        `${riderService}/api/rider/order/update/${order.id}`,
         {},
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -68,7 +68,7 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
     setVerifying(true);
     try {
       await axios.post(
-        `${riderService}/api/rider/order/verify/${order._id}`,
+        `${riderService}/api/rider/order/verify/${order.id}`,
         { otp },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -145,7 +145,7 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
               fontFamily: "monospace",
             }}
           >
-            #{order._id.slice(-8).toUpperCase()}
+            #{order.id.slice(-8).toUpperCase()}
           </span>
         </div>
 

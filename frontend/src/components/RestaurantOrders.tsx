@@ -241,7 +241,7 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
           >
             {activeOrders.map((order) => (
               <OrderCard
-                key={order._id}
+                key={order.id}
                 order={order}
                 onStatusUpdate={fetchOrders}
               />
@@ -311,7 +311,7 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
           >
             {completedOrders.map((order) => (
               <OrderCard
-                key={order._id}
+                key={order.id}
                 order={order}
                 onStatusUpdate={fetchOrders}
               />

@@ -426,7 +426,7 @@ const AddAddressPage = () => {
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {addresses.map((addr) => (
                 <div
-                  key={addr._id}
+                  key={addr.id}
                   style={{
                     padding: "14px",
                     borderRadius: 14,
@@ -483,8 +483,8 @@ const AddAddressPage = () => {
                   </div>
 
                   <button
-                    onClick={() => deleteAddress(addr._id)}
-                    disabled={deletingId === addr._id}
+                    onClick={() => deleteAddress(addr.id)}
+                    disabled={deletingId === addr.id}
                     style={{
                       width: 30,
                       height: 30,
@@ -496,10 +496,10 @@ const AddAddressPage = () => {
                       alignItems: "center",
                       justifyContent: "center",
                       cursor:
-                        deletingId === addr._id ? "not-allowed" : "pointer",
+                        deletingId === addr.id ? "not-allowed" : "pointer",
                       flexShrink: 0,
                       transition: "all 0.2s",
-                      opacity: deletingId === addr._id ? 0.5 : 1,
+                      opacity: deletingId === addr.id ? 0.5 : 1,
                     }}
                     onMouseEnter={(e) => {
                       (e.currentTarget as HTMLButtonElement).style.background =
@@ -510,7 +510,7 @@ const AddAddressPage = () => {
                         "rgba(239,68,68,0.08)";
                     }}
                   >
-                    {deletingId === addr._id ? (
+                    {deletingId === addr.id ? (
                       <div
                         className="spin"
                         style={{
