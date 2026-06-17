@@ -12,7 +12,7 @@ const COD_MIN = 199;
 const COD_MAX = 1499;
 
 interface Address {
-  _id: string;
+  id: string;
   formattedAddress: string;
   mobile: number;
 }
@@ -261,11 +261,11 @@ const Checkout = () => {
                 style={{ display: "flex", flexDirection: "column", gap: 10 }}
               >
                 {addresses.map((addr) => {
-                  const selected = selectedAddressId === addr._id;
+                  const selected = selectedAddressId === addr.id;
                   return (
                     <div
-                      key={addr._id}
-                      onClick={() => setSelectedAddressId(addr._id)}
+                      key={addr.id}
+                      onClick={() => setSelectedAddressId(addr.id)}
                       style={{
                         display: "flex",
                         alignItems: "flex-start",
